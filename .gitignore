@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+credentials/
+
+# Data / local memory
+*.db
+*.sqlite
+*.sqlite3
+data/
+memory_data/
+logs/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Builds / packages
+build/
+dist/
+*.egg-info/
+*.zip
+
+# Local AI models / large binaries
+models/
+*.gguf
+*.bin
+
+# Tests / coverage
+.coverage
+htmlcov/
