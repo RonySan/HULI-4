@@ -3,7 +3,7 @@
 Objetivo: criar o esqueleto definitivo da Huli sem adicionar inteligência sofisticada antes da hora.
 
 - [x] Estrutura de diretórios oficial
-- [ ] Kernel mínimo
+- [ ] Kernel mínimo — implementado, aguardando validação local
 - [ ] Sistema de Skills
 - [ ] Barramento/eventos internos
 - [ ] Configuração centralizada
