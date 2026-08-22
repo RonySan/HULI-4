@@ -3,11 +3,11 @@
 Objetivo: criar o esqueleto definitivo da Huli sem adicionar inteligência sofisticada antes da hora.
 
 - [x] Estrutura de diretórios oficial
-- [ ] Kernel mínimo — implementado, aguardando validação local
-- [ ] Sistema de Skills
-- [ ] Barramento/eventos internos
-- [ ] Configuração centralizada
-- [ ] Logging estruturado
+- [x] Kernel mínimo — validado localmente no Windows
+- [ ] Sistema de Skills — implementado, aguardando validação local
+- [ ] Barramento/eventos internos — implementado, aguardando validação local
+- [ ] Configuração centralizada — implementada, aguardando validação local
+- [ ] Logging estruturado — implementado, aguardando validação local
 - [ ] Persistência/banco inicial
 - [ ] API base
 - [ ] Autenticação
@@ -35,3 +35,18 @@ interação é registrada
 ```
 
 Depois disso, a versão é testada com o usuário, corrigida, documentada e salva no Git antes da Fase 1.
+
+## Rodada acelerada atual
+
+Implementados na branch `phase-0-foundation`:
+
+- Skill Registry com fallback controlado
+- Foundation Skill de validação
+- EventBus síncrono
+- eventos de entrada e saída do Kernel
+- Settings imutável e carregamento por ambiente
+- logging centralizado
+- bootstrap único de dependências
+- testes automatizados específicos para cada componente
+
+Próximo checkpoint: validação local no Windows antes de marcar os quatro módulos como concluídos.
