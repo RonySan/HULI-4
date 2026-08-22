@@ -1,15 +1,16 @@
 """Ponto de entrada local da Huli 4 durante a Fase 0."""
 
 from huli import __app_name__, __version__
-from huli.core import InvalidKernelInput, Kernel
+from huli.bootstrap import build_runtime
+from huli.core import InvalidKernelInput
 
 
 def run_cli() -> None:
-    """Executa a interface mínima de terminal usada para validar o Kernel."""
-    kernel = Kernel()
+    """Executa a interface local usada para validar a fundação."""
+    runtime = build_runtime()
 
     print(f"{__app_name__} {__version__} — Fase 0 em construção.")
-    print("Kernel mínimo ativo. Digite 'sair' para encerrar.")
+    print("Kernel + Skill Registry ativos. Digite 'sair' para encerrar.")
 
     while True:
         try:
@@ -23,7 +24,7 @@ def run_cli() -> None:
             break
 
         try:
-            response = kernel.process(text)
+            response = runtime.kernel.process(text)
         except InvalidKernelInput as exc:
             print(f"Huli: {exc}")
             continue
@@ -32,7 +33,7 @@ def run_cli() -> None:
 
 
 def main() -> None:
-    """Inicializa a interface local mínima da Huli."""
+    """Inicializa a interface local da Huli."""
     run_cli()
 
 
