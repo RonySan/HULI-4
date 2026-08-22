@@ -30,7 +30,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 ```text
 Cliente local / API
         ↓
-Autenticação
+Identidade e permissões
         ↓
 SecurityPolicy
         ↓
@@ -47,7 +47,7 @@ EventBus
 SQLite
 ```
 
-A Fase 0 inclui estrutura modular, Kernel, Skills, eventos, configuração, logging, persistência SQLite, autenticação, segurança, API FastAPI, testes, Ruff, CI e documentação.
+A Fase 0 inclui estrutura modular, Kernel, Skills, eventos, configuração, logging, persistência SQLite, autenticação, modo visitante, segurança, API FastAPI, testes, Ruff, CI e documentação.
 
 ## Instalação de desenvolvimento
 
@@ -75,7 +75,15 @@ O script executa Ruff, Pytest e o validador ponta a ponta em banco temporário.
 python main.py
 ```
 
-Na primeira execução, Huli solicita a criação da identidade proprietária. Nas execuções seguintes, exige autenticação antes de aceitar mensagens.
+Na primeira execução, Huli permite configurar o proprietário ou continuar como visitante. A senha do proprietário é **opcional**; se for utilizada, deve ter pelo menos 4 caracteres nesta fase.
+
+Depois que existe um proprietário:
+
+- o nome do proprietário entra como proprietário;
+- se ele não configurou senha, nenhuma senha é pedida;
+- se configurou senha, ela é solicitada;
+- usuário vazio ou desconhecido entra como **visitante**;
+- visitante só pode executar capacidades básicas não sensíveis permitidas pela `SecurityPolicy`.
 
 ## Executar API local
 
@@ -90,7 +98,7 @@ http://127.0.0.1:8765
 http://127.0.0.1:8765/docs
 ```
 
-A API não deve ser exposta publicamente durante a Fase 0.
+A API não deve ser exposta publicamente durante a Fase 0. Rotas protegidas continuam exigindo sessão de proprietário; visitante não recebe acesso protegido pela API.
 
 ## Roadmap e documentação
 
