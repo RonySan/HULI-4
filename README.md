@@ -105,7 +105,7 @@ A API não deve ser exposta publicamente durante a Fase 0. Rotas protegidas cont
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)
-- [`docs/ALPHA_2_VALIDATION.md`](docs/ALPHA_2_VALIDATION.md)
+- [`docs/PHASE_0_VALIDATION.md`](docs/PHASE_0_VALIDATION.md)
 - [`docs/DEVELOPMENT_RULES.md`](docs/DEVELOPMENT_RULES.md)
 - [`docs/PHASE_1_PLAN.md`](docs/PHASE_1_PLAN.md)
 
