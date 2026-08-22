@@ -2,45 +2,59 @@
 
 Este checklist deve ser executado antes de concluir a Fase 0.
 
-## Atualização
+## Validação automatizada no Windows
+
+Atualize a branch:
 
 ```powershell
 cd C:\HULI4
 git checkout phase-0-foundation
 git pull
+```
+
+Depois execute um único comando:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE0.ps1
+```
+
+O script usa o `.venv` existente e executa:
+
+1. verificação do Python;
+2. instalação/atualização de `.[dev]`;
+3. Ruff;
+4. Pytest;
+5. `tools/validate_phase0.py`.
+
+O validador automatizado usa um banco temporário e não altera `data/huli.db` do usuário.
+
+Resultado esperado no final:
+
+```text
+FASE 0: validação automatizada concluída com sucesso.
+FASE 0 APROVADA NESTE COMPUTADOR
+```
+
+## Teste manual final do terminal
+
+Depois da validação automatizada:
+
+```powershell
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-```
-
-## Qualidade
-
-```powershell
-python -m ruff check .
-python -m pytest
-```
-
-Ambos precisam terminar sem erro.
-
-## Terminal
-
-```powershell
 python main.py
 ```
 
-Na primeira execução:
+Validar:
 
-1. criar o usuário proprietário;
-2. criar uma senha com pelo menos 10 caracteres;
-3. autenticar;
-4. executar `ping`;
-5. executar uma frase sem Skill;
-6. encerrar com `sair`.
+1. setup do proprietário na primeira execução, quando ainda não existir;
+2. login;
+3. `ping` atendido pela `FoundationSkill`;
+4. uma frase sem Skill retornando fallback controlado;
+5. `sair` encerrando e revogando a sessão.
 
-`ping` deve ser atendido pela `FoundationSkill`. Uma frase sem Skill deve retornar fallback controlado.
+## Persistência real local
 
-## Persistência
-
-Após uma interação, o arquivo abaixo deve existir:
+Após uma interação manual, deve existir:
 
 ```text
 C:\HULI4\data\huli.db
@@ -48,26 +62,24 @@ C:\HULI4\data\huli.db
 
 O banco não deve ser commitado no Git.
 
-## API
+## API manual opcional de inspeção
 
-Em outro PowerShell, com o ambiente ativo:
+A API já é coberta pelo validador automatizado e pelos testes. Para inspecioná-la manualmente:
 
 ```powershell
 python -m huli.api
 ```
 
-Verificar:
+Abrir:
 
 ```text
 http://127.0.0.1:8765/health
 http://127.0.0.1:8765/docs
 ```
 
-Pelo `/docs`, validar setup/login quando aplicável e enviar `ping` para `/v1/messages` usando Bearer token.
-
 ## Critério final
 
-A Fase 0 só é concluída quando terminal e API comprovarem o fluxo:
+A Fase 0 só é concluída quando o Windows comprovar o fluxo:
 
 ```text
 Huli inicia
