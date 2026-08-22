@@ -22,12 +22,12 @@ class CliSession:
         return self.role == "guest"
 
 
-def _first_run_setup(runtime: HuliRuntime) -> bool:
+def _first_run_setup(runtime: HuliRuntime) -> CliSession:
     print("Primeira inicialização: configure o proprietário ou entre como visitante.")
     username = input("Usuário proprietário (Enter = visitante): ").strip()
     if not username:
         print("Huli: Continuando como visitante. O proprietário pode ser configurado depois.")
-        return False
+        return CliSession(username="Visitante", role="guest")
 
     while True:
         password = getpass("Nova senha (opcional, Enter = sem senha): ")
@@ -38,24 +38,23 @@ def _first_run_setup(runtime: HuliRuntime) -> bool:
                 continue
         try:
             runtime.auth.create_owner(username, password)
+            user, token = runtime.auth.authenticate(username, password)
         except ValueError as exc:
             print(f"Huli: {exc}")
             username = input("Usuário proprietário (Enter = visitante): ").strip()
             if not username:
                 print("Huli: Continuando como visitante.")
-                return False
+                return CliSession(username="Visitante", role="guest")
             continue
         print("Huli: Identidade proprietária configurada com sucesso.")
         if not password:
             print("Huli: Proprietário configurado sem senha local.")
-        return True
+        return CliSession(username=user.username, role="owner", token=token)
 
 
 def _authenticate(runtime: HuliRuntime) -> CliSession:
     if not runtime.auth.has_users():
-        configured = _first_run_setup(runtime)
-        if not configured:
-            return CliSession(username="Visitante", role="guest")
+        return _first_run_setup(runtime)
 
     for _attempt in range(3):
         username = input("Usuário (Enter = visitante): ").strip()
