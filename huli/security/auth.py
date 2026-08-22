@@ -34,7 +34,47 @@ class AuthService:
             row = connection.execute("SELECT COUNT(*) AS total FROM users").fetchone()
             return bool(row and int(row["total"]) > 0)
 
-    def create_owner(self, username: str, password: str) -> AuthenticatedUser:
+    def find_user(self, username: str) -> AuthenticatedUser | None:
+        """Retorna um usuário ativo pelo nome, sem autenticar sua sessão."""
+        try:
+            normalized = self._normalize_username(username)
+        except ValueError:
+            return None
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, username
+                FROM users
+                WHERE username = ? COLLATE NOCASE
+                  AND is_active = 1
+                """,
+                (normalized,),
+            ).fetchone()
+        if row is None:
+            return None
+        return AuthenticatedUser(id=int(row["id"]), username=str(row["username"]))
+
+    def requires_password(self, username: str) -> bool:
+        """Indica se o usuário configurou uma senha não vazia."""
+        normalized = self._normalize_username(username)
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT password_hash, password_salt, is_active
+                FROM users
+                WHERE username = ? COLLATE NOCASE
+                """,
+                (normalized,),
+            ).fetchone()
+        if row is None or not bool(row["is_active"]):
+            raise AuthenticationError("Usuário não encontrado.")
+
+        expected = bytes.fromhex(str(row["password_hash"]))
+        salt = bytes.fromhex(str(row["password_salt"]))
+        empty_password_hash = self._hash_password("", salt)
+        return not hmac.compare_digest(expected, empty_password_hash)
+
+    def create_owner(self, username: str, password: str = "") -> AuthenticatedUser:
         username = self._normalize_username(username)
         self.policy.validate_password(password)
         salt = secrets.token_bytes(16)
@@ -55,7 +95,7 @@ class AuthService:
                 raise
             return AuthenticatedUser(id=int(cursor.lastrowid), username=username)
 
-    def authenticate(self, username: str, password: str) -> tuple[AuthenticatedUser, str]:
+    def authenticate(self, username: str, password: str = "") -> tuple[AuthenticatedUser, str]:
         username = self._normalize_username(username)
         with self.database.connect() as connection:
             row = connection.execute(
@@ -105,6 +145,8 @@ class AuthService:
         return AuthenticatedUser(id=int(row["id"]), username=str(row["username"]))
 
     def revoke_token(self, token: str) -> None:
+        if not token:
+            return
         token_hash = self._hash_token(token)
         with self.database.connect() as connection:
             connection.execute(
