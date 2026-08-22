@@ -42,16 +42,23 @@ def run_validation() -> None:
         require(runtime.database.path.exists(), "Banco SQLite não foi criado.")
         require(runtime.skills.names == ("foundation",), "Skill Registry inesperado.")
 
-        owner = runtime.auth.create_owner("validation-owner", "validation-pass-123")
+        owner = runtime.auth.create_owner("validation-owner")
         require(owner.username == "validation-owner", "Proprietário não foi criado.")
-
-        authenticated_user, token = runtime.auth.authenticate(
-            "validation-owner",
-            "validation-pass-123",
+        require(
+            runtime.auth.requires_password("validation-owner") is False,
+            "Proprietário sem senha foi marcado como protegido por senha.",
         )
-        require(authenticated_user.id == owner.id, "Login retornou usuário incorreto.")
+
+        authenticated_user, token = runtime.auth.authenticate("validation-owner")
+        require(authenticated_user.id == owner.id, "Login sem senha retornou usuário incorreto.")
         require(bool(token), "Login não retornou token.")
         require(runtime.auth.validate_token(token).id == owner.id, "Token não foi validado.")
+
+        require(runtime.security.guest_can_execute("ping"), "Visitante não pode usar ping.")
+        require(
+            not runtime.security.guest_can_execute("mostrar minhas memórias"),
+            "Visitante recebeu permissão para capacidade privada.",
+        )
 
         kernel_response = runtime.kernel.process("ping")
         require(kernel_response.ok, "Kernel retornou falha para ping.")
@@ -76,9 +83,9 @@ def run_validation() -> None:
 
         login = client.post(
             "/v1/auth/login",
-            json={"username": "validation-owner", "password": "validation-pass-123"},
+            json={"username": "validation-owner"},
         )
-        require(login.status_code == 200, "Login HTTP falhou.")
+        require(login.status_code == 200, "Login HTTP sem senha falhou.")
         api_token = login.json()["access_token"]
         headers = {"Authorization": f"Bearer {api_token}"}
 
