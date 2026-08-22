@@ -35,7 +35,7 @@ FASE 0: validação automatizada concluída com sucesso.
 FASE 0 APROVADA NESTE COMPUTADOR
 ```
 
-## Teste manual final do terminal
+## Teste manual — proprietário
 
 Depois da validação automatizada:
 
@@ -44,13 +44,26 @@ Depois da validação automatizada:
 python main.py
 ```
 
-Validar:
+Na primeira execução:
 
-1. setup do proprietário na primeira execução, quando ainda não existir;
-2. login;
-3. `ping` atendido pela `FoundationSkill`;
-4. uma frase sem Skill retornando fallback controlado;
-5. `sair` encerrando e revogando a sessão.
+1. informar o nome do proprietário;
+2. deixar a senha vazia para usar sem senha **ou** definir uma senha com pelo menos 4 caracteres;
+3. entrar como proprietário;
+4. executar `ping`;
+5. encerrar com `sair`.
+
+Quando o proprietário foi criado sem senha, a Huli não deve pedir senha nas execuções seguintes para esse usuário.
+
+## Teste manual — visitante
+
+Também validar o modo visitante:
+
+1. iniciar `python main.py`;
+2. deixar `Usuário` vazio ou informar um nome não cadastrado;
+3. confirmar a mensagem de acesso como visitante;
+4. executar `ping`, que deve funcionar;
+5. tentar `abrir calculadora`, que deve ser bloqueado por exigir proprietário;
+6. encerrar com `sair`.
 
 ## Persistência real local
 
@@ -77,6 +90,8 @@ http://127.0.0.1:8765/health
 http://127.0.0.1:8765/docs
 ```
 
+A senha também pode ser vazia para um proprietário configurado sem senha nesta fase local. Usuário desconhecido não recebe acesso protegido pela API.
+
 ## Critério final
 
 A Fase 0 só é concluída quando o Windows comprovar o fluxo:
@@ -84,7 +99,9 @@ A Fase 0 só é concluída quando o Windows comprovar o fluxo:
 ```text
 Huli inicia
 ↓
-autentica
+identifica proprietário ou visitante
+↓
+aplica permissões
 ↓
 recebe mensagem
 ↓
