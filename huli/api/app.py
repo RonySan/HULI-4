@@ -17,12 +17,12 @@ _bearer = HTTPBearer(auto_error=False)
 
 class SetupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
-    password: str = Field(min_length=10, max_length=256)
+    password: str = Field(default="", max_length=256)
 
 
 class LoginRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
-    password: str = Field(min_length=1, max_length=256)
+    password: str = Field(default="", max_length=256)
 
 
 class MessageRequest(BaseModel):
@@ -90,7 +90,11 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
-        return {"id": user.id, "username": user.username}
+        return {
+            "id": user.id,
+            "username": user.username,
+            "password_protected": bool(payload.password),
+        }
 
     @app.post("/v1/auth/login")
     def login(payload: LoginRequest) -> dict[str, object]:
