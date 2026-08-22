@@ -34,6 +34,22 @@ def test_messages_require_authentication(tmp_path: Path) -> None:
     assert response.status_code == 401
 
 
+def test_passwordless_owner_can_login_with_empty_password(tmp_path: Path) -> None:
+    client, _runtime = build_client(tmp_path)
+
+    setup = client.post("/v1/auth/setup", json={"username": "rony"})
+    assert setup.status_code == 201
+    assert setup.json()["password_protected"] is False
+
+    login = client.post("/v1/auth/login", json={"username": "rony"})
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+
+    me = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["username"] == "rony"
+
+
 def test_full_authenticated_flow_and_persistence(tmp_path: Path) -> None:
     client, runtime = build_client(tmp_path)
 
@@ -42,6 +58,7 @@ def test_full_authenticated_flow_and_persistence(tmp_path: Path) -> None:
         json={"username": "rony", "password": "senha-segura-123"},
     )
     assert setup.status_code == 201
+    assert setup.json()["password_protected"] is True
 
     second_setup = client.post(
         "/v1/auth/setup",
