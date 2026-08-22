@@ -10,8 +10,16 @@ from dataclasses import dataclass
 import logging
 
 from huli.core import EventBus, Kernel
-from huli.infrastructure.config import Settings, load_settings
-from huli.infrastructure.logging import configure_logging
+from huli.infrastructure import (
+    EventRepository,
+    InteractionRepository,
+    RuntimeRecorder,
+    Settings,
+    SQLiteDatabase,
+    configure_logging,
+    load_settings,
+)
+from huli.security import AuthService, SecurityPolicy
 from huli.skills import FoundationSkill, SkillRegistry
 
 
@@ -24,21 +32,40 @@ class HuliRuntime:
     skills: SkillRegistry
     kernel: Kernel
     logger: logging.Logger
+    database: SQLiteDatabase
+    interactions: InteractionRepository
+    auth: AuthService
+    security: SecurityPolicy
 
 
 def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     """Constrói a fundação da Huli sem usar estado global oculto."""
     resolved_settings = settings or load_settings()
     logger = configure_logging(resolved_settings)
+
+    database = SQLiteDatabase(resolved_settings.database_path)
+    database.initialize()
+
     events = EventBus()
+    event_repository = EventRepository(database)
+    interactions = InteractionRepository(database)
+    RuntimeRecorder(events, event_repository, interactions)
+
     skills = SkillRegistry()
     skills.register(FoundationSkill())
+
+    security = SecurityPolicy(
+        max_input_chars=resolved_settings.max_input_chars,
+        session_hours=resolved_settings.session_hours,
+    )
+    auth = AuthService(database, security)
     kernel = Kernel(handler=skills, event_bus=events)
 
     logger.info(
-        "runtime_initialized environment=%s skills=%s",
+        "runtime_initialized environment=%s skills=%s schema=%s",
         resolved_settings.environment,
         ",".join(skills.names),
+        database.schema_version(),
     )
 
     return HuliRuntime(
@@ -47,4 +74,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         skills=skills,
         kernel=kernel,
         logger=logger,
+        database=database,
+        interactions=interactions,
+        auth=auth,
+        security=security,
     )
