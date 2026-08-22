@@ -2,16 +2,16 @@
 
 Huli é uma assistente pessoal de inteligência artificial local-first, projetada para acompanhar o usuário de forma contínua entre computador, celular e servidor.
 
-O objetivo do projeto não é criar apenas uma agenda ou um chatbot. Huli deverá evoluir como uma plataforma pessoal de IA com memória de longo prazo, contexto, skills, agentes, voz, visão, integrações e automação segura.
+O objetivo do projeto não é criar apenas uma agenda ou um chatbot. Huli deverá evoluir como uma plataforma pessoal de IA com memória de longo prazo, contexto, Skills, agentes, voz, visão, integrações e automação segura.
 
 ## Identidade
 
 - Nome falado e exibido normalmente: **Huli**.
 - A sigla técnica é **HULI**.
 - Significado conhecido internamente: **Humano Único Leal Inteligente**.
-- Huli não deve repetir o significado da sigla ao se apresentar ou em respostas comuns.
-- O significado só deve ser explicado quando o usuário perguntar explicitamente ou quando houver motivo técnico/documental.
-- Nunca pronunciar o nome como “H ponto U ponto L ponto I”. O nome é **Huli**.
+- Huli não repete o significado da sigla ao se apresentar ou em respostas comuns.
+- O significado só é explicado quando solicitado ou necessário em contexto técnico/documental.
+- O nome é pronunciado **Huli**, não letra por letra.
 
 ## Princípio de desenvolvimento
 
@@ -21,14 +21,76 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-**Versão:** `4.0.0-alpha.1`  
+**Versão:** `4.0.0-alpha.2`  
 **Fase atual:** Fase 0 — Fundação arquitetural  
-**Módulo concluído:** estrutura oficial do projeto  
-**Próximo módulo:** Kernel mínimo
+**Status:** implementação concluída na branch `phase-0-foundation`; CI aprovado; aguardando validação final no Windows antes do merge.
 
-## Roadmap
+## Fundação atual
 
-O plano mestre completo está em [`docs/ROADMAP.md`](docs/ROADMAP.md).
+```text
+Cliente local / API
+        ↓
+Autenticação
+        ↓
+SecurityPolicy
+        ↓
+Kernel
+        ↓
+SkillRegistry
+        ↓
+Skill
+        ↓
+KernelResponse
+        ↓
+EventBus
+        ↓
+SQLite
+```
+
+A Fase 0 inclui estrutura modular, Kernel, Skills, eventos, configuração, logging, persistência SQLite, autenticação, segurança, API FastAPI, testes, Ruff, CI e documentação.
+
+## Instalação de desenvolvimento
+
+Requer Python 3.11.
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m pytest
+```
+
+## Executar no terminal
+
+```powershell
+python main.py
+```
+
+Na primeira execução, Huli solicita a criação da identidade proprietária. Nas execuções seguintes, exige autenticação antes de aceitar mensagens.
+
+## Executar API local
+
+```powershell
+python -m huli.api
+```
+
+Por padrão:
+
+```text
+http://127.0.0.1:8765
+http://127.0.0.1:8765/docs
+```
+
+A API não deve ser exposta publicamente durante a Fase 0.
+
+## Roadmap e documentação
+
+- [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
+- [`docs/API_SECURITY.md`](docs/API_SECURITY.md)
+- [`docs/ALPHA_2_VALIDATION.md`](docs/ALPHA_2_VALIDATION.md)
+- [`docs/DEVELOPMENT_RULES.md`](docs/DEVELOPMENT_RULES.md)
 
 ## Estrutura oficial
 
@@ -55,12 +117,10 @@ HULI-4/
 └── .gitignore
 ```
 
-A decisão detalhada está em [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md).
+## Segurança
+
+Dados sensíveis, tokens, bancos locais, arquivos `.env`, chaves e credenciais nunca devem ser versionados.
 
 ## Regra arquitetural
 
 Novas ideias não alteram arbitrariamente a arquitetura ou a ordem do projeto. Elas devem ser encaixadas na fase correspondente do roadmap.
-
-## Segurança
-
-Huli lidará futuramente com informações pessoais, credenciais, dispositivos e automações. Dados sensíveis, segredos, tokens, bancos locais e arquivos de ambiente nunca devem ser versionados no Git.
