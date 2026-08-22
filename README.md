@@ -23,7 +23,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 **Versão:** `4.0.0-alpha.2`  
 **Fase atual:** Fase 0 — Fundação arquitetural  
-**Status:** implementação concluída na branch `phase-0-foundation`; CI aprovado; aguardando validação final no Windows antes do merge.
+**Status:** implementação concluída na branch `phase-0-foundation`; CI automatizado em Linux/Windows; aguardando somente validação manual final no Windows antes do merge.
 
 ## Fundação atual
 
@@ -57,9 +57,17 @@ Requer Python 3.11.
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
-python -m ruff check .
-python -m pytest
 ```
+
+## Validação completa da Fase 0 no Windows
+
+Depois de atualizar a branch, execute:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE0.ps1
+```
+
+O script executa Ruff, Pytest e o validador ponta a ponta em banco temporário.
 
 ## Executar no terminal
 
@@ -91,6 +99,7 @@ A API não deve ser exposta publicamente durante a Fase 0.
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)
 - [`docs/ALPHA_2_VALIDATION.md`](docs/ALPHA_2_VALIDATION.md)
 - [`docs/DEVELOPMENT_RULES.md`](docs/DEVELOPMENT_RULES.md)
+- [`docs/PHASE_1_PLAN.md`](docs/PHASE_1_PLAN.md)
 
 ## Estrutura oficial
 
@@ -110,6 +119,8 @@ HULI-4/
 │   ├── clients/
 │   └── infrastructure/
 ├── tests/
+├── tools/
+├── scripts/
 ├── docs/
 ├── main.py
 ├── pyproject.toml
