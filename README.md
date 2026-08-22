@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-**Versão:** `4.0.0-alpha.2`  
+**Versão:** `4.0.0-alpha.3`  
 **Fase atual:** Fase 0 — Fundação arquitetural  
 **Status:** implementação concluída na branch `phase-0-foundation`; CI automatizado em Linux/Windows; aguardando somente validação manual final no Windows antes do merge.
 
