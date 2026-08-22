@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Annotated
-
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -43,10 +41,7 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
     app.state.runtime = resolved_runtime
 
     def current_user(
-        credentials: Annotated[
-            HTTPAuthorizationCredentials | None,
-            Depends(_bearer),
-        ],
+        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     ) -> AuthenticatedUser:
         if credentials is None or credentials.scheme.lower() != "bearer":
             raise HTTPException(
@@ -62,10 +57,7 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
             ) from exc
 
     def bearer_token(
-        credentials: Annotated[
-            HTTPAuthorizationCredentials | None,
-            Depends(_bearer),
-        ],
+        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     ) -> str:
         if credentials is None or credentials.scheme.lower() != "bearer":
             raise HTTPException(
@@ -116,20 +108,20 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
         }
 
     @app.get("/v1/me")
-    def me(user: Annotated[AuthenticatedUser, Depends(current_user)]) -> dict[str, object]:
+    def me(user: AuthenticatedUser = Depends(current_user)) -> dict[str, object]:
         return {"id": user.id, "username": user.username}
 
     @app.post("/v1/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
     def logout(
-        _user: Annotated[AuthenticatedUser, Depends(current_user)],
-        token: Annotated[str, Depends(bearer_token)],
+        _user: AuthenticatedUser = Depends(current_user),
+        token: str = Depends(bearer_token),
     ) -> None:
         resolved_runtime.auth.revoke_token(token)
 
     @app.post("/v1/messages")
     def messages(
         payload: MessageRequest,
-        _user: Annotated[AuthenticatedUser, Depends(current_user)],
+        _user: AuthenticatedUser = Depends(current_user),
     ) -> dict[str, object]:
         try:
             resolved_runtime.security.validate_input(payload.text)
