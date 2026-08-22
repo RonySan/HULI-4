@@ -47,6 +47,7 @@ class Kernel:
             "kernel.response.created",
             {
                 "request_id": response.request_id,
+                "text": response.text,
                 "handled_by": response.handled_by,
                 "ok": response.ok,
             },
