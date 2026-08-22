@@ -30,3 +30,6 @@ jobs:
 
       - name: Pytest
         run: python -m pytest
+
+      - name: Phase 0 validation
+        run: python tools/validate_phase0.py
