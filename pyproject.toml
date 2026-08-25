@@ -19,6 +19,11 @@ dev = [
     "ruff>=0.12,<1",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["huli*"]
+exclude = ["data*", "tests*", "tools*", "scripts*", "docs*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
