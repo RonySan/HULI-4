@@ -1,0 +1,43 @@
+name: Huli CI
+
+on:
+  push:
+    branches: [main, phase-0-foundation]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Simulate runtime data directory
+        run: python -c "from pathlib import Path; Path('data').mkdir(exist_ok=True)"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Ruff
+        run: python -m ruff check .
+
+      - name: Pytest
+        run: python -m pytest
+
+      - name: Phase 0 validation
+        run: python tools/validate_phase0.py
