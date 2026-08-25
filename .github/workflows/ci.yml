@@ -43,3 +43,6 @@ jobs:
 
       - name: Foundation regression validation
         run: python tools/validate_phase0.py
+
+      - name: Intent Engine validation
+        run: python tools/validate_intent_engine.py
