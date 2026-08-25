@@ -21,11 +21,14 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-**Versão:** `4.0.0-alpha.3`  
-**Fase atual:** Fase 0 — Fundação arquitetural  
-**Status:** implementação concluída na branch `phase-0-foundation`; CI automatizado em Linux/Windows; aguardando somente validação manual final no Windows antes do merge.
+**Versão:** `4.0.0-alpha.4`  
+**Fase atual:** Fase 1 — Cérebro básico  
+**Módulo atual:** Intent Engine  
+**Branch de desenvolvimento:** `phase-1-brain`
 
-## Fundação atual
+A Fase 0 foi concluída e mergeada em `main` na versão `4.0.0-alpha.3`.
+
+## Fluxo atual
 
 ```text
 Cliente local / API
@@ -35,6 +38,12 @@ Identidade e permissões
 SecurityPolicy
         ↓
 Kernel
+        ↓
+kernel.request.received
+        ↓
+Intent Engine
+        ↓
+brain.intent.classified
         ↓
 SkillRegistry
         ↓
@@ -47,7 +56,19 @@ EventBus
 SQLite
 ```
 
-A Fase 0 inclui estrutura modular, Kernel, Skills, eventos, configuração, logging, persistência SQLite, autenticação, modo visitante, segurança, API FastAPI, testes, Ruff, CI e documentação.
+O Intent Engine classifica intenções fundamentais de forma local e determinística. Ele não executa ações e não utiliza OpenAI/Ollama.
+
+## Intenções iniciais
+
+- `system.status`
+- `time.query`
+- `agenda.query`
+- `task.create`
+- `smalltalk`
+- `project.query`
+- `unknown`
+
+Agenda, Planner, Small Talk e Project Context ainda serão implementados nas próximas etapas da Fase 1. A existência de uma intenção não significa que a capacidade já esteja disponível.
 
 ## Instalação de desenvolvimento
 
@@ -59,15 +80,14 @@ py -3.11 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## Validação completa da Fase 0 no Windows
-
-Depois de atualizar a branch, execute:
+## Qualidade
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE0.ps1
+python -m ruff check .
+python -m pytest
 ```
 
-O script executa Ruff, Pytest e o validador ponta a ponta em banco temporário.
+O CI executa em Linux e Windows nas branches `phase-*` e em `main`.
 
 ## Executar no terminal
 
@@ -75,15 +95,7 @@ O script executa Ruff, Pytest e o validador ponta a ponta em banco temporário.
 python main.py
 ```
 
-Na primeira execução, Huli permite configurar o proprietário ou continuar como visitante. A senha do proprietário é **opcional**; se for utilizada, deve ter pelo menos 4 caracteres nesta fase.
-
-Depois que existe um proprietário:
-
-- o nome do proprietário entra como proprietário;
-- se ele não configurou senha, nenhuma senha é pedida;
-- se configurou senha, ela é solicitada;
-- usuário vazio ou desconhecido entra como **visitante**;
-- visitante só pode executar capacidades básicas não sensíveis permitidas pela `SecurityPolicy`.
+A senha do proprietário é opcional. Usuários desconhecidos podem entrar em modo visitante com permissões limitadas.
 
 ## Executar API local
 
@@ -98,16 +110,17 @@ http://127.0.0.1:8765
 http://127.0.0.1:8765/docs
 ```
 
-A API não deve ser exposta publicamente durante a Fase 0. Rotas protegidas continuam exigindo sessão de proprietário; visitante não recebe acesso protegido pela API.
+A API ainda não deve ser exposta diretamente à internet.
 
 ## Roadmap e documentação
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- [`docs/PHASE_1_PLAN.md`](docs/PHASE_1_PLAN.md)
+- [`docs/INTENT_ENGINE.md`](docs/INTENT_ENGINE.md)
 - [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)
 - [`docs/PHASE_0_VALIDATION.md`](docs/PHASE_0_VALIDATION.md)
 - [`docs/DEVELOPMENT_RULES.md`](docs/DEVELOPMENT_RULES.md)
-- [`docs/PHASE_1_PLAN.md`](docs/PHASE_1_PLAN.md)
 
 ## Estrutura oficial
 
