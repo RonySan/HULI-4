@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
+from huli.brain import IntentEngine
 from huli.core import EventBus, Kernel
 from huli.infrastructure import (
     EventRepository,
@@ -30,6 +31,7 @@ class HuliRuntime:
     settings: Settings
     events: EventBus
     skills: SkillRegistry
+    intents: IntentEngine
     kernel: Kernel
     logger: logging.Logger
     database: SQLiteDatabase
@@ -53,6 +55,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
 
     skills = SkillRegistry()
     skills.register(FoundationSkill())
+    intents = IntentEngine()
 
     security = SecurityPolicy(
         max_input_chars=resolved_settings.max_input_chars,
@@ -72,6 +75,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         settings=resolved_settings,
         events=events,
         skills=skills,
+        intents=intents,
         kernel=kernel,
         logger=logger,
         database=database,
