@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from huli.brain import IntentEngine
+from huli.brain import IntentEngine, IntentObserver
 from huli.core import EventBus, Kernel
 from huli.infrastructure import (
     EventRepository,
@@ -56,6 +56,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills = SkillRegistry()
     skills.register(FoundationSkill())
     intents = IntentEngine()
+    IntentObserver(events, intents)
 
     security = SecurityPolicy(
         max_input_chars=resolved_settings.max_input_chars,
