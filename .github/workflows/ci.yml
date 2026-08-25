@@ -2,7 +2,9 @@ name: Huli CI
 
 on:
   push:
-    branches: [main, phase-0-foundation]
+    branches:
+      - main
+      - "phase-*"
   pull_request:
     branches: [main]
 
@@ -39,5 +41,5 @@ jobs:
       - name: Pytest
         run: python -m pytest
 
-      - name: Phase 0 validation
+      - name: Foundation regression validation
         run: python tools/validate_phase0.py
