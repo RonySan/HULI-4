@@ -4,6 +4,7 @@ from huli.skills.agenda_skill import AgendaSkill
 from huli.skills.base import Skill
 from huli.skills.daily_summary_skill import DailySummarySkill
 from huli.skills.foundation import FoundationSkill
+from huli.skills.knowledge_skill import KnowledgeSkill
 from huli.skills.memory_skill import MemorySkill
 from huli.skills.planner_skill import PlannerSkill
 from huli.skills.project_context import ProjectContextSkill
@@ -16,6 +17,7 @@ __all__ = [
     "DailySummarySkill",
     "DuplicateSkillError",
     "FoundationSkill",
+    "KnowledgeSkill",
     "MemorySkill",
     "PlannerSkill",
     "ProjectContextSkill",
