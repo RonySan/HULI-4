@@ -1,6 +1,6 @@
 """Testes do BrainDispatcher da Fase 1."""
 
-from huli.brain import BrainDispatcher, IntentEngine
+from huli.brain import BrainDispatcher, ContextEngine, IntentEngine
 from huli.core import Event, EventBus, KernelRequest
 from huli.skills import FoundationSkill, SkillRegistry
 
@@ -9,7 +9,13 @@ def build_dispatcher() -> tuple[BrainDispatcher, EventBus]:
     events = EventBus()
     skills = SkillRegistry()
     skills.register(FoundationSkill())
-    return BrainDispatcher(IntentEngine(), skills, events), events
+    dispatcher = BrainDispatcher(
+        IntentEngine(),
+        ContextEngine(),
+        skills,
+        events,
+    )
+    return dispatcher, events
 
 
 def test_foundation_skill_still_handles_ping() -> None:
@@ -22,7 +28,7 @@ def test_foundation_skill_still_handles_ping() -> None:
     assert response.ok is True
 
 
-def test_known_intent_without_skill_returns_specific_pending_message() -> None:
+def test_known_intent_without_skill_returns_controlled_message() -> None:
     dispatcher, _events = build_dispatcher()
     request = KernelRequest.from_text("que horas são?")
 
@@ -30,8 +36,8 @@ def test_known_intent_without_skill_returns_specific_pending_message() -> None:
 
     assert response.handled_by == "brain-dispatcher"
     assert response.ok is False
-    assert "horário" in response.text
-    assert "capacidade" in response.text
+    assert "time.query" in response.text
+    assert "capacidade ativa" in response.text
 
 
 def test_unknown_request_keeps_controlled_fallback() -> None:
