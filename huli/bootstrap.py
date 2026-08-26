@@ -36,6 +36,7 @@ from huli.memory import (
     MemoryPolicy,
     MemoryRepository,
 )
+from huli.personality import PersonalityEngine
 from huli.security import AuthService, SecurityPolicy
 from huli.skills import (
     AgendaSkill,
@@ -58,6 +59,7 @@ class HuliRuntime:
     skills: SkillRegistry
     intents: IntentEngine
     context: ContextEngine
+    personality: PersonalityEngine
     planner: PlannerService
     agenda: AgendaService
     daily_summary: DailySummaryService
@@ -104,6 +106,10 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
 
     intents = IntentEngine()
     context = ContextEngine(max_turns=resolved_settings.context_turns)
+    personality = PersonalityEngine(
+        events,
+        timezone_name=resolved_settings.timezone,
+    )
 
     skills = SkillRegistry()
     skills.register(FoundationSkill())
@@ -111,7 +117,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(PlannerSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(DailySummarySkill(daily_summary))
-    skills.register(SmallTalkSkill(resolved_settings.timezone))
+    skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
     skills.register(ProjectContextSkill(context, planner))
     skills.register(MemorySkill(memory))
     skills.register(KnowledgeSkill(knowledge))
@@ -121,6 +127,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         context=context,
         skills=skills,
         event_bus=events,
+        personality=personality,
     )
     security = SecurityPolicy(
         max_input_chars=resolved_settings.max_input_chars,
@@ -142,6 +149,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         skills=skills,
         intents=intents,
         context=context,
+        personality=personality,
         planner=planner,
         agenda=agenda,
         daily_summary=daily_summary,
