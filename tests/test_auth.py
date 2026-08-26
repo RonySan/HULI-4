@@ -42,6 +42,26 @@ def test_owner_can_be_created_without_password(tmp_path: Path) -> None:
     assert auth.validate_token(token) == owner
 
 
+def test_owner_password_can_be_removed(tmp_path: Path) -> None:
+    auth = build_auth(tmp_path)
+    auth.create_owner("rony", "senha-segura-123")
+
+    assert auth.requires_password("rony") is True
+    auth.set_password("rony", "")
+    assert auth.requires_password("rony") is False
+
+    user, token = auth.authenticate("rony")
+    assert user.username == "rony"
+    assert auth.validate_token(token) == user
+
+
+def test_whitespace_password_is_treated_as_empty(tmp_path: Path) -> None:
+    auth = build_auth(tmp_path)
+    auth.create_owner("rony", "   ")
+
+    assert auth.requires_password("rony") is False
+
+
 def test_authentication_rejects_wrong_password(tmp_path: Path) -> None:
     auth = build_auth(tmp_path)
     auth.create_owner("rony", "senha-segura-123")
