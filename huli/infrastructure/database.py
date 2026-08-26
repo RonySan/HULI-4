@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 5
+_SCHEMA_VERSION = 6
 
 
 class SQLiteDatabase:
@@ -59,6 +59,9 @@ class SQLiteDatabase:
             if 5 not in applied:
                 self._migration_005_memory(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (5)")
+            if 6 not in applied:
+                self._migration_006_knowledge(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (6)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -193,6 +196,95 @@ class SQLiteDatabase:
 
             CREATE INDEX IF NOT EXISTS idx_memories_owner_content
             ON memories(owner, normalized_content, is_active);
+            """
+        )
+
+    @staticmethod
+    def _migration_006_knowledge(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS knowledge_entities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                name TEXT NOT NULL,
+                normalized_name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                sensitivity TEXT NOT NULL DEFAULT 'normal',
+                manual_source INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_entity
+            ON knowledge_entities(owner, normalized_name, kind);
+            CREATE INDEX IF NOT EXISTS idx_knowledge_entities_owner_active
+            ON knowledge_entities(owner, is_active, kind, normalized_name);
+
+            CREATE TABLE IF NOT EXISTS knowledge_entity_sources (
+                entity_id INTEGER NOT NULL,
+                memory_id INTEGER NOT NULL,
+                PRIMARY KEY(entity_id, memory_id),
+                FOREIGN KEY(entity_id) REFERENCES knowledge_entities(id) ON DELETE CASCADE,
+                FOREIGN KEY(memory_id) REFERENCES memories(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS knowledge_aliases (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                entity_id INTEGER NOT NULL,
+                alias TEXT NOT NULL,
+                normalized_alias TEXT NOT NULL,
+                source_memory_id INTEGER,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY(entity_id) REFERENCES knowledge_entities(id) ON DELETE CASCADE,
+                FOREIGN KEY(source_memory_id) REFERENCES memories(id) ON DELETE SET NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_alias
+            ON knowledge_aliases(owner, entity_id, normalized_alias);
+            CREATE INDEX IF NOT EXISTS idx_knowledge_alias_lookup
+            ON knowledge_aliases(owner, normalized_alias, is_active);
+
+            CREATE TABLE IF NOT EXISTS knowledge_relations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                subject_id INTEGER NOT NULL,
+                predicate TEXT NOT NULL,
+                object_id INTEGER NOT NULL,
+                sensitivity TEXT NOT NULL DEFAULT 'normal',
+                confidence REAL NOT NULL DEFAULT 1.0,
+                source_memory_id INTEGER,
+                valid_from TEXT,
+                valid_until TEXT,
+                created_at TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY(subject_id) REFERENCES knowledge_entities(id) ON DELETE CASCADE,
+                FOREIGN KEY(object_id) REFERENCES knowledge_entities(id) ON DELETE CASCADE,
+                FOREIGN KEY(source_memory_id) REFERENCES memories(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_knowledge_relations_subject
+            ON knowledge_relations(owner, subject_id, predicate, is_active);
+            CREATE INDEX IF NOT EXISTS idx_knowledge_relations_object
+            ON knowledge_relations(owner, object_id, predicate, is_active);
+
+            CREATE TABLE IF NOT EXISTS knowledge_facts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                entity_id INTEGER NOT NULL,
+                key TEXT NOT NULL,
+                value TEXT NOT NULL,
+                normalized_value TEXT NOT NULL,
+                sensitivity TEXT NOT NULL DEFAULT 'normal',
+                confidence REAL NOT NULL DEFAULT 1.0,
+                source_memory_id INTEGER,
+                valid_from TEXT,
+                valid_until TEXT,
+                created_at TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY(entity_id) REFERENCES knowledge_entities(id) ON DELETE CASCADE,
+                FOREIGN KEY(source_memory_id) REFERENCES memories(id) ON DELETE SET NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_knowledge_facts_entity
+            ON knowledge_facts(owner, entity_id, key, is_active);
             """
         )
 
