@@ -49,3 +49,6 @@ jobs:
 
       - name: Phase 1 validation
         run: python tools/validate_phase1.py
+
+      - name: Phase 2 Memory Engine validation
+        run: python tools/validate_phase2.py
