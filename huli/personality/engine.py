@@ -65,7 +65,14 @@ class PersonalityEngine:
         is_followup = False
         reason = "default"
 
-        if intent == "unknown" and last_intent == "smalltalk" and normalized in self._SOCIAL_FOLLOWUPS:
+        if intent == "unknown" and self._asks_acronym_meaning(normalized):
+            resolved_intent = "smalltalk"
+            reason = "identity-question"
+        elif (
+            intent == "unknown"
+            and last_intent == "smalltalk"
+            and normalized in self._SOCIAL_FOLLOWUPS
+        ):
             resolved_intent = "smalltalk"
             is_followup = True
             reason = "social-followup"
@@ -74,7 +81,11 @@ class PersonalityEngine:
         if explicit_risk or resolved_intent in self._RISK_INTENTS:
             mode = ConversationMode.RISK
             reason = "risk"
-        elif re.search(r"\b(?:urgente|grave|serio|sério|falha critica|falha crítica|emergencia|emergência)\b", text, re.IGNORECASE):
+        elif re.search(
+            r"\b(?:urgente|grave|serio|sério|falha critica|falha crítica|emergencia|emergência)\b",
+            text,
+            re.IGNORECASE,
+        ):
             mode = ConversationMode.SERIOUS
             reason = "serious-signal"
         elif active_project or resolved_intent.startswith(self._PROFESSIONAL_PREFIXES):
@@ -129,7 +140,10 @@ class PersonalityEngine:
         )
 
         if self._asks_acronym_meaning(normalized):
-            return f"HULI significa {self.profile.acronym_meaning}. No uso normal, meu nome é Huli."
+            return (
+                f"HULI significa {self.profile.acronym_meaning}. "
+                "No uso normal, meu nome é Huli."
+            )
 
         if "quem e voce" in normalized or "quem e a huli" in normalized:
             return (
@@ -137,7 +151,11 @@ class PersonalityEngine:
                 "estruturado sem inventar o que não está registrado."
             )
 
-        if "como voce esta" in normalized or "como vc ta" in normalized or "tudo bem" in normalized:
+        if (
+            "como voce esta" in normalized
+            or "como vc ta" in normalized
+            or "tudo bem" in normalized
+        ):
             if mode is ConversationMode.PROFESSIONAL:
                 return f"Estou operacional{suffix}. Podemos seguir com o trabalho."
             return f"Estou funcionando normalmente{suffix}. Continuo por aqui."
@@ -147,7 +165,10 @@ class PersonalityEngine:
                 return f"Continuo operacional{suffix}."
             return f"Certo{suffix}. Seguimos."
 
-        if any(term in normalized for term in ("obrigado", "obrigada", "valeu", "agradecido", "agradecida")):
+        if any(
+            term in normalized
+            for term in ("obrigado", "obrigada", "valeu", "agradecido", "agradecida")
+        ):
             return f"Por nada{suffix}."
 
         if any(term in normalized for term in ("tchau", "ate logo", "ate mais")):
