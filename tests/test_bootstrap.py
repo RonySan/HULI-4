@@ -14,7 +14,7 @@ def test_build_runtime_connects_foundation_components(tmp_path: Path) -> None:
 
     assert runtime.settings.environment == "test"
     assert runtime.skills.names == ("foundation",)
-    assert runtime.events.subscriber_count("kernel.request.received") == 2
+    assert runtime.events.subscriber_count("kernel.request.received") == 1
     assert runtime.events.subscriber_count("kernel.response.created") == 1
     assert runtime.database.schema_version() == 2
 
@@ -29,7 +29,11 @@ def test_build_runtime_connects_foundation_components(tmp_path: Path) -> None:
     assert len(classified) == 1
     assert classified[0].payload["intent"] == "system.status"
 
-    latest = runtime.interactions.latest(1)
-    assert len(latest) == 1
-    assert latest[0].user_text == "status huli"
-    assert latest[0].handled_by == "foundation"
+    pending = runtime.kernel.process("que horas são?")
+    assert pending.handled_by == "brain-dispatcher"
+    assert "horário" in pending.text
+
+    latest = runtime.interactions.latest(2)
+    assert len(latest) == 2
+    assert latest[0].user_text == "que horas são?"
+    assert latest[1].user_text == "status huli"
