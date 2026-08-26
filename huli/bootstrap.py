@@ -25,6 +25,11 @@ from huli.infrastructure import (
     configure_logging,
     load_settings,
 )
+from huli.knowledge import (
+    KnowledgeRepository,
+    KnowledgeService,
+    MemoryKnowledgeSynchronizer,
+)
 from huli.memory import (
     MemoryCandidateObserver,
     MemoryEngine,
@@ -36,6 +41,7 @@ from huli.skills import (
     AgendaSkill,
     DailySummarySkill,
     FoundationSkill,
+    KnowledgeSkill,
     MemorySkill,
     PlannerSkill,
     ProjectContextSkill,
@@ -57,6 +63,8 @@ class HuliRuntime:
     daily_summary: DailySummaryService
     memory: MemoryEngine
     memory_repository: MemoryRepository
+    knowledge: KnowledgeService
+    knowledge_repository: KnowledgeRepository
     dispatcher: BrainDispatcher
     kernel: Kernel
     logger: logging.Logger
@@ -90,6 +98,10 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     memory = MemoryEngine(memory_repository, MemoryPolicy(), events)
     MemoryCandidateObserver(events, memory)
 
+    knowledge_repository = KnowledgeRepository(database)
+    knowledge = KnowledgeService(knowledge_repository, events)
+    MemoryKnowledgeSynchronizer(events, memory_repository, knowledge)
+
     intents = IntentEngine()
     context = ContextEngine(max_turns=resolved_settings.context_turns)
 
@@ -102,6 +114,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(SmallTalkSkill(resolved_settings.timezone))
     skills.register(ProjectContextSkill(context, planner))
     skills.register(MemorySkill(memory))
+    skills.register(KnowledgeSkill(knowledge))
 
     dispatcher = BrainDispatcher(
         intents=intents,
@@ -134,6 +147,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         daily_summary=daily_summary,
         memory=memory,
         memory_repository=memory_repository,
+        knowledge=knowledge,
+        knowledge_repository=knowledge_repository,
         dispatcher=dispatcher,
         kernel=kernel,
         logger=logger,
