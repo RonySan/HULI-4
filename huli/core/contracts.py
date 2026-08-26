@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Protocol
+from typing import Mapping, Protocol
 from uuid import uuid4
 
 
@@ -23,18 +23,16 @@ class KernelRequest:
     text: str
     request_id: str = field(default_factory=lambda: uuid4().hex)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
     @classmethod
-    def from_text(cls, text: str) -> "KernelRequest":
-        """Cria uma requisição válida a partir de texto bruto."""
+    def from_text(cls, text: str, metadata: Mapping[str, object] | None = None) -> "KernelRequest":
         if not isinstance(text, str):
             raise InvalidKernelInput("A entrada do Kernel precisa ser texto.")
-
         normalized = text.strip()
         if not normalized:
             raise InvalidKernelInput("A entrada do Kernel não pode estar vazia.")
-
-        return cls(text=normalized)
+        return cls(text=normalized, metadata=dict(metadata or {}))
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +47,5 @@ class KernelResponse:
 
 
 class KernelHandler(Protocol):
-    """Contrato que futuros componentes poderão implementar para atender mensagens."""
-
     def handle(self, request: KernelRequest) -> KernelResponse:
         """Processa uma requisição e devolve uma resposta estruturada."""

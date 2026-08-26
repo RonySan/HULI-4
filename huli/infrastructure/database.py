@@ -1,4 +1,4 @@
-"""Persistência SQLite da fundação da Huli."""
+"""Persistência SQLite da Huli."""
 
 from __future__ import annotations
 
@@ -7,19 +7,15 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 4
 
 
 class SQLiteDatabase:
-    """Gerencia conexões e migrações simples do banco local da Huli."""
-
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        """Abre uma conexão configurada e garante fechamento ao final."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
@@ -35,7 +31,6 @@ class SQLiteDatabase:
             connection.close()
 
     def initialize(self) -> None:
-        """Aplica as migrações idempotentes da fundação."""
         with self.connect() as connection:
             connection.execute(
                 """
@@ -49,17 +44,20 @@ class SQLiteDatabase:
                 int(row["version"])
                 for row in connection.execute("SELECT version FROM schema_migrations")
             }
-
             if 1 not in applied:
                 self._migration_001_runtime(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (1)")
-
             if 2 not in applied:
                 self._migration_002_auth(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (2)")
+            if 3 not in applied:
+                self._migration_003_planner(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (3)")
+            if 4 not in applied:
+                self._migration_004_agenda(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (4)")
 
     def schema_version(self) -> int:
-        """Retorna a maior versão de schema aplicada."""
         with self.connect() as connection:
             row = connection.execute(
                 "SELECT COALESCE(MAX(version), 0) AS version FROM schema_migrations"
@@ -77,7 +75,6 @@ class SQLiteDatabase:
                 payload_json TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
-
             CREATE INDEX IF NOT EXISTS idx_events_name_created_at
             ON events(name, created_at);
 
@@ -90,7 +87,6 @@ class SQLiteDatabase:
                 ok INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
-
             CREATE INDEX IF NOT EXISTS idx_interactions_created_at
             ON interactions(created_at);
             """
@@ -118,9 +114,46 @@ class SQLiteDatabase:
                 revoked_at TEXT,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
-
             CREATE INDEX IF NOT EXISTS idx_sessions_user_expires
             ON sessions(user_id, expires_at);
+            """
+        )
+
+    @staticmethod
+    def _migration_003_planner(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                priority TEXT NOT NULL DEFAULT 'normal',
+                project TEXT,
+                due_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                completed_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_tasks_status_project
+            ON tasks(status, project, id);
+            """
+        )
+
+    @staticmethod
+    def _migration_004_agenda(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS appointments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                start_at TEXT NOT NULL,
+                end_at TEXT,
+                status TEXT NOT NULL DEFAULT 'scheduled',
+                project TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                cancelled_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_appointments_status_start
+            ON appointments(status, start_at);
             """
         )
 

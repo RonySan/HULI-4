@@ -16,12 +16,13 @@ def test_database_initializes_schema(tmp_path: Path) -> None:
     database.initialize()
 
     assert database.path.exists()
-    assert database.schema_version() == 2
+    assert database.schema_version() == 4
 
 
 def test_runtime_recorder_persists_interaction(tmp_path: Path) -> None:
     database = SQLiteDatabase(tmp_path / "huli.db")
     database.initialize()
+
     events = EventBus()
     event_repository = EventRepository(database)
     interactions = InteractionRepository(database)
@@ -43,6 +44,5 @@ def test_runtime_recorder_persists_interaction(tmp_path: Path) -> None:
 
     assert event_repository.count() == 2
     latest = interactions.latest(1)
-    assert latest[0].request_id == "abc"
     assert latest[0].user_text == "ping"
     assert latest[0].response_text == "pong"

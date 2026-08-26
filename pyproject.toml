@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "huli-ai"
-version = "4.0.0a3"
+version = "4.0.0a6"
 description = "Huli 4 - assistente pessoal de IA local-first"
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "fastapi>=0.116,<1",
     "uvicorn>=0.35,<1",
+    "tzdata>=2025.2",
 ]
 
 [project.optional-dependencies]

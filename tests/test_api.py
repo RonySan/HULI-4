@@ -23,7 +23,7 @@ def test_health_is_public(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["schema_version"] == 2
+    assert response.json()["schema_version"] == 4
 
 
 def test_messages_require_authentication(tmp_path: Path) -> None:
