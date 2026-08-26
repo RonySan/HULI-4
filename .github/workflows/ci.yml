@@ -46,3 +46,6 @@ jobs:
 
       - name: Intent Engine validation
         run: python tools/validate_intent_engine.py
+
+      - name: Phase 1 validation
+        run: python tools/validate_phase1.py
