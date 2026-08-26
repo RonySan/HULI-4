@@ -4,18 +4,15 @@
 
 Classificar a intenção de uma mensagem sem executar ações prematuramente e tornar o roteamento consciente dessa classificação.
 
-## Entrada
+## Estado
 
-Texto bruto do usuário.
+O Intent Engine `alpha.4` foi validado localmente no Windows do usuário com 19 testes aprovados e o validador dedicado concluído com sucesso.
+
+A `alpha.5` corrige a integração conversacional observada no teste manual: intenções reconhecidas não devem mais cair todas no mesmo fallback genérico.
 
 ## Saída do Intent Engine
 
-`IntentMatch` com:
-
-- `intent`;
-- `confidence`;
-- `normalized_text`;
-- `metadata.matched_rule`.
+`IntentMatch` contém `intent`, `confidence`, `normalized_text` e `metadata.matched_rule`.
 
 ## Intenções iniciais
 
@@ -29,28 +26,16 @@ Texto bruto do usuário.
 
 Essas intenções são vocabulário técnico interno. Elas não significam que Agenda, Planner, Small Talk ou Project Context já estejam implementados.
 
-## Normalização
-
-A normalização fica em `huli/brain/normalization.py` e é separada da classificação. Ela aplica `casefold`, remove acentos e pontuação e normaliza espaços.
-
 ## BrainDispatcher
 
-A partir da `4.0.0-alpha.5`, o Kernel usa `BrainDispatcher` como handler. O dispatcher:
+A partir da `4.0.0-alpha.5`, o Kernel usa `BrainDispatcher` como handler. O dispatcher classifica, publica `brain.intent.classified`, tenta resolver uma Skill e, quando a intenção é reconhecida mas a capacidade ainda não existe, devolve uma resposta específica de capacidade pendente.
 
-1. classifica a intenção;
-2. publica `brain.intent.classified`;
-3. tenta resolver uma Skill existente;
-4. quando a intenção é reconhecida mas a capacidade ainda não foi implementada, devolve uma resposta específica de capacidade pendente;
-5. para texto realmente desconhecido, usa fallback controlado.
-
-Isso evita o comportamento anterior em que `que horas são?`, `minha agenda` e `oi Huli` recebiam exatamente o mesmo fallback, apesar de já terem sido classificados corretamente.
-
-## Exemplos
+Exemplos:
 
 ```text
 que horas são?
 → time.query
-→ "Entendi que você quer saber o horário, mas essa capacidade ainda não está ativa."
+→ informa que a capacidade de horário ainda não está ativa
 
 
 o que temos pra fazer hoje?
