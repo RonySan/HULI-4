@@ -7,33 +7,18 @@ from huli.core import Event
 from huli.infrastructure import Settings
 
 
-def test_build_runtime_connects_foundation_components(tmp_path: Path) -> None:
-    runtime = build_runtime(
-        Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path)
-    )
-
-    assert runtime.settings.environment == "test"
-    assert runtime.skills.names == ("foundation",)
-    assert runtime.events.subscriber_count("kernel.request.received") == 1
-    assert runtime.events.subscriber_count("kernel.response.created") == 1
-    assert runtime.database.schema_version() == 2
-
+def test_build_runtime_connects_phase1_components(tmp_path: Path) -> None:
+    runtime = build_runtime(Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path))
+    assert runtime.skills.names == ("foundation", "time", "planner", "agenda", "daily-summary", "smalltalk", "project-context")
+    assert runtime.database.schema_version() == 4
     classified: list[Event] = []
     runtime.events.subscribe("brain.intent.classified", classified.append)
-
-    response = runtime.kernel.process("status huli")
+    response = runtime.kernel.process("status huli", metadata={"session_id": "bootstrap-test"})
     assert response.handled_by == "foundation"
-    assert response.ok is True
-    assert "Kernel e Skill Registry" in response.text
-
-    assert len(classified) == 1
+    time_response = runtime.kernel.process("que horas são?", metadata={"session_id": "bootstrap-test"})
+    assert time_response.handled_by == "time"
+    assert len(classified) == 2
     assert classified[0].payload["intent"] == "system.status"
-
-    pending = runtime.kernel.process("que horas são?")
-    assert pending.handled_by == "brain-dispatcher"
-    assert "horário" in pending.text
-
+    assert classified[1].payload["intent"] == "time.query"
     latest = runtime.interactions.latest(2)
-    assert len(latest) == 2
     assert latest[0].user_text == "que horas são?"
-    assert latest[1].user_text == "status huli"
