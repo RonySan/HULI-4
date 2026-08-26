@@ -1,4 +1,4 @@
-"""Ponto de entrada local da Huli 4 durante a Fase 0."""
+"""Ponto de entrada local da Huli 4 durante a Fase 1."""
 
 from __future__ import annotations
 
@@ -30,9 +30,9 @@ def _first_run_setup(runtime: HuliRuntime) -> CliSession:
         return CliSession(username="Visitante", role="guest")
 
     while True:
-        password = getpass("Nova senha (opcional, Enter = sem senha): ")
+        password = getpass("Nova senha (opcional, Enter = sem senha): ").strip()
         if password:
-            confirmation = getpass("Confirme a senha: ")
+            confirmation = getpass("Confirme a senha: ").strip()
             if password != confirmation:
                 print("Huli: As senhas não coincidem.")
                 continue
@@ -68,7 +68,7 @@ def _authenticate(runtime: HuliRuntime) -> CliSession:
 
         password = ""
         if runtime.auth.requires_password(known_user.username):
-            password = getpass("Senha: ")
+            password = getpass("Senha: ").strip()
 
         try:
             user, token = runtime.auth.authenticate(known_user.username, password)
@@ -88,10 +88,10 @@ def _can_execute(runtime: HuliRuntime, session: CliSession, text: str) -> bool:
 
 
 def run_cli() -> None:
-    """Executa a interface local usada para validar a fundação."""
+    """Executa a interface local da Huli durante a Fase 1."""
     runtime = build_runtime()
 
-    print(f"{__app_name__} {__version__} — Fase 0 em construção.")
+    print(f"{__app_name__} {__version__} — Fase 1: cérebro básico em construção.")
     session = _authenticate(runtime)
 
     if session.is_guest:
@@ -100,7 +100,7 @@ def run_cli() -> None:
     else:
         print(f"Huli: Bem-vindo, {session.username}.")
 
-    print("Kernel + Skill Registry ativos. Digite 'sair' para encerrar.")
+    print("Kernel + BrainDispatcher + Skill Registry ativos. Digite 'sair' para encerrar.")
 
     try:
         while True:
