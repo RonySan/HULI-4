@@ -7,7 +7,7 @@ from huli.core import Event
 from huli.infrastructure import Settings
 
 
-def test_build_runtime_connects_phase2_components(tmp_path: Path) -> None:
+def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> None:
     runtime = build_runtime(
         Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path)
     )
@@ -20,9 +20,11 @@ def test_build_runtime_connects_phase2_components(tmp_path: Path) -> None:
         "smalltalk",
         "project-context",
         "memory",
+        "knowledge",
     )
-    assert runtime.database.schema_version() == 5
+    assert runtime.database.schema_version() == 6
     assert runtime.memory_repository.count_active("rony") == 0
+    assert runtime.knowledge_repository.list_entities("rony") == ()
 
     classified: list[Event] = []
     runtime.events.subscribe("brain.intent.classified", classified.append)
@@ -39,18 +41,27 @@ def test_build_runtime_connects_phase2_components(tmp_path: Path) -> None:
     )
     assert time_response.handled_by == "time"
 
+    owner_meta = {
+        "session_id": "bootstrap-test",
+        "username": "rony",
+        "role": "owner",
+    }
     memory_response = runtime.kernel.process(
-        "lembre que eu prefiro café sem açúcar",
-        metadata={
-            "session_id": "bootstrap-test",
-            "username": "rony",
-            "role": "owner",
-        },
+        "lembre que Medynx depende de MySQL",
+        metadata=owner_meta,
     )
     assert memory_response.handled_by == "memory"
     assert runtime.memory_repository.count_active("rony") == 1
 
-    assert len(classified) == 3
+    knowledge_response = runtime.kernel.process(
+        "do que Medynx depende?",
+        metadata=owner_meta,
+    )
+    assert knowledge_response.handled_by == "knowledge"
+    assert "MySQL" in knowledge_response.text
+
+    assert len(classified) == 4
     assert classified[0].payload["intent"] == "system.status"
     assert classified[1].payload["intent"] == "time.query"
     assert classified[2].payload["intent"] == "memory.remember"
+    assert classified[3].payload["intent"] == "knowledge.relation"
