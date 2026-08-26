@@ -1,4 +1,4 @@
-"""Validação isolada do Intent Engine da Fase 1.1."""
+"""Validação isolada do Intent Engine e BrainDispatcher da Fase 1."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from huli.infrastructure import Settings
 
 
 class ValidationFailure(RuntimeError):
-    """Falha em um requisito obrigatório do Intent Engine."""
+    """Falha em um requisito obrigatório do cérebro básico."""
 
 
 def require(condition: bool, message: str) -> None:
@@ -28,6 +28,8 @@ def run_validation() -> None:
         ("o que temos pra fazer hoje?", IntentName.AGENDA_QUERY),
         ("adiciona uma tarefa revisar o Medynx", IntentName.TASK_CREATE),
         ("oi Huli", IntentName.SMALL_TALK),
+        ("oi huli, bom dia", IntentName.SMALL_TALK),
+        ("como você está huli?", IntentName.SMALL_TALK),
         ("qual o status do projeto Medynx?", IntentName.PROJECT_QUERY),
         ("trocar o trocador de calor da piscina", IntentName.UNKNOWN),
     )
@@ -59,14 +61,34 @@ def run_validation() -> None:
             "O evento brain.intent.classified contém intenção incorreta.",
         )
 
-    print("INTENT ENGINE: validação concluída com sucesso.")
+        time_response = runtime.kernel.process("que horas são?")
+        require(
+            time_response.handled_by == "brain-dispatcher",
+            "Consulta de horário não passou pelo BrainDispatcher.",
+        )
+        require(
+            "horário" in time_response.text,
+            "BrainDispatcher não devolveu fallback específico para horário.",
+        )
+
+        greeting_response = runtime.kernel.process("oi huli, bom dia")
+        require(
+            greeting_response.handled_by == "brain-dispatcher",
+            "Saudação reconhecida não passou pelo BrainDispatcher.",
+        )
+        require(
+            "Small Talk" in greeting_response.text,
+            "Saudação não recebeu fallback específico de Small Talk.",
+        )
+
+    print("INTENT + DISPATCHER: validação concluída com sucesso.")
 
 
 def main() -> int:
     try:
         run_validation()
     except Exception as exc:
-        print(f"INTENT ENGINE: FALHA - {exc}")
+        print(f"INTENT + DISPATCHER: FALHA - {exc}")
         return 1
     return 0
 
