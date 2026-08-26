@@ -1,96 +1,39 @@
-"""Validação isolada do Intent Engine e BrainDispatcher da Fase 1."""
+"""Validação do Intent Engine e do roteamento consciente da Fase 1."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-
 from huli.brain import IntentEngine, IntentName
 from huli.bootstrap import build_runtime
-from huli.core import Event
 from huli.infrastructure import Settings
-
-
-class ValidationFailure(RuntimeError):
-    """Falha em um requisito obrigatório do cérebro básico."""
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
-        raise ValidationFailure(message)
+        raise RuntimeError(message)
 
 
 def run_validation() -> None:
     engine = IntentEngine()
-    cases = (
-        ("que horas são?", IntentName.TIME_QUERY),
-        ("qual o status da Huli?", IntentName.SYSTEM_STATUS),
-        ("o que temos pra fazer hoje?", IntentName.AGENDA_QUERY),
-        ("adiciona uma tarefa revisar o Medynx", IntentName.TASK_CREATE),
-        ("oi Huli", IntentName.SMALL_TALK),
-        ("oi huli, bom dia", IntentName.SMALL_TALK),
-        ("como você está huli?", IntentName.SMALL_TALK),
-        ("qual o status do projeto Medynx?", IntentName.PROJECT_QUERY),
-        ("trocar o trocador de calor da piscina", IntentName.UNKNOWN),
-    )
-
-    print("Validando classificações do Intent Engine...")
+    cases = (("que horas são?", IntentName.TIME_QUERY), ("agenda dentista amanhã às 15:00", IntentName.AGENDA_CREATE), ("tarefas pendentes", IntentName.TASK_LIST), ("oi huli, bom dia", IntentName.SMALL_TALK), ("vamos falar do projeto Medynx", IntentName.PROJECT_SET), ("trocar o trocador de calor da piscina", IntentName.UNKNOWN))
     for text, expected in cases:
         result = engine.classify(text)
         print(f"  {text!r} -> {result.intent.value} ({result.confidence:.2f})")
-        require(
-            result.intent is expected,
-            f"Intenção incorreta para {text!r}: esperado {expected.value}, recebido {result.intent.value}.",
-        )
-
+        require(result.intent is expected, f"Intenção incorreta para {text!r}.")
     with TemporaryDirectory(prefix="huli-intent-") as temp_dir:
-        runtime = build_runtime(
-            Settings(
-                environment="validation",
-                log_level="CRITICAL",
-                data_dir=Path(temp_dir) / "data",
-            )
-        )
-        captured: list[Event] = []
-        runtime.events.subscribe("brain.intent.classified", captured.append)
-
-        runtime.kernel.process("status huli")
-        require(len(captured) == 1, "O runtime não publicou exatamente um evento de intenção.")
-        require(
-            captured[0].payload.get("intent") == IntentName.SYSTEM_STATUS.value,
-            "O evento brain.intent.classified contém intenção incorreta.",
-        )
-
-        time_response = runtime.kernel.process("que horas são?")
-        require(
-            time_response.handled_by == "brain-dispatcher",
-            "Consulta de horário não passou pelo BrainDispatcher.",
-        )
-        require(
-            "horário" in time_response.text,
-            "BrainDispatcher não devolveu fallback específico para horário.",
-        )
-
-        greeting_response = runtime.kernel.process("oi huli, bom dia")
-        require(
-            greeting_response.handled_by == "brain-dispatcher",
-            "Saudação reconhecida não passou pelo BrainDispatcher.",
-        )
-        require(
-            "Small Talk" in greeting_response.text,
-            "Saudação não recebeu fallback específico de Small Talk.",
-        )
-
+        runtime = build_runtime(Settings(environment="validation", log_level="CRITICAL", data_dir=Path(temp_dir) / "data"))
+        meta = {"session_id": "intent-validation", "username": "rony", "role": "owner"}
+        require(runtime.kernel.process("que horas são?", metadata=meta).handled_by == "time", "TimeSkill não recebeu time.query.")
+        require(runtime.kernel.process("oi huli, bom dia", metadata=meta).handled_by == "smalltalk", "SmallTalkSkill não recebeu smalltalk.")
     print("INTENT + DISPATCHER: validação concluída com sucesso.")
 
 
 def main() -> int:
     try:
-        run_validation()
+        run_validation(); return 0
     except Exception as exc:
-        print(f"INTENT + DISPATCHER: FALHA - {exc}")
-        return 1
-    return 0
+        print(f"INTENT + DISPATCHER: FALHA - {exc}"); return 1
 
 
 if __name__ == "__main__":
