@@ -91,7 +91,10 @@ class IntentEngine:
             _IntentRule(
                 IntentName.SMALL_TALK,
                 re.compile(
-                    r"^(?:oi|ola|opa|e ai|bom dia|boa tarde|boa noite)(?: huli)?$"
+                    r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: (?:bom dia|boa tarde|boa noite))?"
+                    r"|(?:bom dia|boa tarde|boa noite)(?: huli)?"
+                    r"|(?:tudo bem|como voce esta|como vai)(?: huli)?"
+                    r"|huli (?:tudo bem|como voce esta|como vai))$"
                     r"|^(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?$"
                     r"|^(?:tchau|ate logo|ate mais)(?: huli)?$"
                 ),
