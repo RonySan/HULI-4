@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from huli.brain import IntentEngine, IntentObserver
+from huli.brain import BrainDispatcher, IntentEngine
 from huli.core import EventBus, Kernel
 from huli.infrastructure import (
     EventRepository,
@@ -32,6 +32,7 @@ class HuliRuntime:
     events: EventBus
     skills: SkillRegistry
     intents: IntentEngine
+    dispatcher: BrainDispatcher
     kernel: Kernel
     logger: logging.Logger
     database: SQLiteDatabase
@@ -41,7 +42,7 @@ class HuliRuntime:
 
 
 def build_runtime(settings: Settings | None = None) -> HuliRuntime:
-    """Constrói a fundação da Huli sem usar estado global oculto."""
+    """Constrói o runtime da Huli sem usar estado global oculto."""
     resolved_settings = settings or load_settings()
     logger = configure_logging(resolved_settings)
 
@@ -56,14 +57,14 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills = SkillRegistry()
     skills.register(FoundationSkill())
     intents = IntentEngine()
-    IntentObserver(events, intents)
+    dispatcher = BrainDispatcher(intents=intents, skills=skills, event_bus=events)
 
     security = SecurityPolicy(
         max_input_chars=resolved_settings.max_input_chars,
         session_hours=resolved_settings.session_hours,
     )
     auth = AuthService(database, security)
-    kernel = Kernel(handler=skills, event_bus=events)
+    kernel = Kernel(handler=dispatcher, event_bus=events)
 
     logger.info(
         "runtime_initialized environment=%s skills=%s schema=%s",
@@ -77,6 +78,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         events=events,
         skills=skills,
         intents=intents,
+        dispatcher=dispatcher,
         kernel=kernel,
         logger=logger,
         database=database,
