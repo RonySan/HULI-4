@@ -37,21 +37,33 @@ def run_validation() -> None:
             "role": "owner",
         }
 
-        require(runtime.database.schema_version() == 5, "Schema da Fase 2 não foi aplicado.")
+        require(
+            runtime.database.schema_version() >= 5,
+            "Schema mínimo da Fase 2 não foi aplicado.",
+        )
         require("memory" in runtime.skills.names, "MemorySkill não foi registrada.")
 
         preference = runtime.kernel.process(
             "lembre que eu prefiro café sem açúcar",
             metadata=meta,
         )
-        require(preference.handled_by == "memory", "Memória explícita não chegou à MemorySkill.")
-        require(runtime.memory_repository.count_active("rony") == 1, "Memória não foi persistida.")
+        require(
+            preference.handled_by == "memory",
+            "Memória explícita não chegou à MemorySkill.",
+        )
+        require(
+            runtime.memory_repository.count_active("rony") == 1,
+            "Memória não foi persistida.",
+        )
 
         recalled = runtime.kernel.process(
             "o que você lembra sobre café?",
             metadata=meta,
         )
-        require("café sem açúcar" in recalled.text, "Recall não encontrou memória persistida.")
+        require(
+            "café sem açúcar" in recalled.text,
+            "Recall não encontrou memória persistida.",
+        )
 
         runtime.kernel.process("vamos falar do projeto Medynx", metadata=meta)
         runtime.kernel.process(
@@ -64,7 +76,10 @@ def run_validation() -> None:
             if memory.project == "Medynx"
         ]
         require(len(project_memories) == 1, "Memória não herdou o projeto ativo.")
-        require(project_memories[0].kind.value == "project", "Memória de projeto recebeu tipo incorreto.")
+        require(
+            project_memories[0].kind.value == "project",
+            "Memória de projeto recebeu tipo incorreto.",
+        )
 
         runtime.memory.remember(owner="outro", content="prefiro chá verde")
         require(
@@ -146,7 +161,8 @@ def run_validation() -> None:
             },
         )
         require(
-            api_save.status_code == 200 and api_save.json()["handled_by"] == "memory",
+            api_save.status_code == 200
+            and api_save.json()["handled_by"] == "memory",
             "API não salvou memória pelo cérebro comum.",
         )
         require(
