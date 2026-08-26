@@ -1,14 +1,14 @@
-# Intent Engine — Fase 1.1
+# Intent Engine + BrainDispatcher — Fase 1.1
 
 ## Objetivo
 
-Classificar a intenção de uma mensagem sem executar ações e sem depender de OpenAI, Ollama ou qualquer serviço externo.
+Classificar a intenção de uma mensagem sem executar ações prematuramente e tornar o roteamento consciente dessa classificação.
 
 ## Entrada
 
 Texto bruto do usuário.
 
-## Saída
+## Saída do Intent Engine
 
 `IntentMatch` com:
 
@@ -31,59 +31,54 @@ Essas intenções são vocabulário técnico interno. Elas não significam que A
 
 ## Normalização
 
-A normalização fica em `huli/brain/normalization.py` e é separada da classificação. Ela:
+A normalização fica em `huli/brain/normalization.py` e é separada da classificação. Ela aplica `casefold`, remove acentos e pontuação e normaliza espaços.
 
-1. aplica `casefold`;
-2. remove acentos;
-3. remove pontuação;
-4. normaliza espaços.
+## BrainDispatcher
 
-## Regras
+A partir da `4.0.0-alpha.5`, o Kernel usa `BrainDispatcher` como handler. O dispatcher:
 
-A classificação usa regras locais determinísticas e ordenadas. Uma frase que não corresponde de forma segura a nenhuma regra retorna `unknown` com confiança `0.0`.
+1. classifica a intenção;
+2. publica `brain.intent.classified`;
+3. tenta resolver uma Skill existente;
+4. quando a intenção é reconhecida mas a capacidade ainda não foi implementada, devolve uma resposta específica de capacidade pendente;
+5. para texto realmente desconhecido, usa fallback controlado.
 
-Não existe fallback para IA nesta etapa.
+Isso evita o comportamento anterior em que `que horas são?`, `minha agenda` e `oi Huli` recebiam exatamente o mesmo fallback, apesar de já terem sido classificados corretamente.
 
-## Integração com o runtime
-
-`IntentObserver` escuta:
-
-```text
-kernel.request.received
-```
-
-classifica a mensagem e publica:
+## Exemplos
 
 ```text
-brain.intent.classified
+que horas são?
+→ time.query
+→ "Entendi que você quer saber o horário, mas essa capacidade ainda não está ativa."
+
+
+o que temos pra fazer hoje?
+→ agenda.query
+→ informa que Agenda ainda não está ativa
+
+
+oi huli, bom dia
+→ smalltalk
+→ informa que Small Talk ainda não está ativo
+
+
+abrir o chrome
+→ unknown
+→ fallback controlado
 ```
-
-com `request_id`, intenção, confiança, texto normalizado e regra correspondente.
-
-O Kernel não importa nem conhece o Intent Engine.
 
 ## Regressão importante
 
-Frases como:
-
-```text
-trocar o trocador de calor da piscina
-```
-
-não podem disparar intenção de horário ou qualquer outra por coincidência de substring.
+`trocar o trocador de calor da piscina` deve permanecer `unknown`, sem disparar intenções por coincidência de substring.
 
 ## Limites desta etapa
 
-- não executa ações;
-- não cria tarefas;
-- não consulta agenda;
-- não mantém contexto;
-- não usa memória;
-- não chama IA externa;
-- ainda não substitui o roteamento das Skills.
+- ainda não cria tarefas;
+- ainda não consulta agenda real;
+- ainda não responde horário real;
+- ainda não mantém contexto;
+- ainda não usa memória;
+- ainda não chama IA externa.
 
-A integração de intenção + contexto + roteamento será evoluída ao longo da Fase 1 sem adicionar regras de domínio ao Kernel.
-
-## Critério de aceite
-
-Frases equivalentes devem chegar à mesma intenção, desconhecidos devem permanecer controlados e toda requisição do Kernel deve gerar `brain.intent.classified` sem alterar a responsabilidade do Kernel.
+Essas capacidades entram nos módulos correspondentes da Fase 1 e fases posteriores.
