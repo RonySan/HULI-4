@@ -17,6 +17,8 @@ from huli.brain import IntentEngine, IntentName, normalize_text
         ("adiciona uma tarefa revisar o Medynx", IntentName.TASK_CREATE),
         ("criar uma tarefa atualizar servidor", IntentName.TASK_CREATE),
         ("oi Huli", IntentName.SMALL_TALK),
+        ("oi huli, bom dia", IntentName.SMALL_TALK),
+        ("como você está huli?", IntentName.SMALL_TALK),
         ("boa noite", IntentName.SMALL_TALK),
         ("qual o status do projeto Medynx?", IntentName.PROJECT_QUERY),
         ("como está o projeto Huli?", IntentName.PROJECT_QUERY),
