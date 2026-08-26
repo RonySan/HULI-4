@@ -55,3 +55,6 @@ jobs:
 
       - name: Phase 3 Knowledge Graph staging validation
         run: python tools/validate_phase3_staging.py
+
+      - name: Phase 4 Personality staging validation
+        run: python tools/validate_phase4.py
