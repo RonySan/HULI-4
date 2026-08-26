@@ -76,6 +76,7 @@ class AuthService:
 
     def create_owner(self, username: str, password: str = "") -> AuthenticatedUser:
         username = self._normalize_username(username)
+        password = str(password or "").strip()
         self.policy.validate_password(password)
         salt = secrets.token_bytes(16)
         password_hash = self._hash_password(password, salt)
@@ -95,8 +96,30 @@ class AuthService:
                 raise
             return AuthenticatedUser(id=int(cursor.lastrowid), username=username)
 
+    def set_password(self, username: str, new_password: str = "") -> None:
+        """Altera ou remove a senha local de um usuário ativo."""
+        normalized = self._normalize_username(username)
+        password = str(new_password or "").strip()
+        self.policy.validate_password(password)
+        salt = secrets.token_bytes(16)
+        password_hash = self._hash_password(password, salt)
+
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, password_salt = ?
+                WHERE username = ? COLLATE NOCASE
+                  AND is_active = 1
+                """,
+                (password_hash.hex(), salt.hex(), normalized),
+            )
+            if cursor.rowcount != 1:
+                raise AuthenticationError("Usuário não encontrado.")
+
     def authenticate(self, username: str, password: str = "") -> tuple[AuthenticatedUser, str]:
         username = self._normalize_username(username)
+        password = str(password or "").strip()
         with self.database.connect() as connection:
             row = connection.execute(
                 """
