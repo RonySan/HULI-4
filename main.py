@@ -1,4 +1,4 @@
-"""Ponto de entrada local da Huli 4 durante a Fase 1."""
+"""Ponto de entrada local da Huli 4 durante a Fase 2."""
 
 from __future__ import annotations
 
@@ -82,19 +82,26 @@ def _can_execute(runtime: HuliRuntime, session: CliSession, text: str) -> bool:
 
 
 def _metadata(session: CliSession) -> dict[str, object]:
-    return {"session_id": session.session_id, "username": session.username, "role": session.role}
+    return {
+        "session_id": session.session_id,
+        "username": session.username,
+        "role": session.role,
+    }
 
 
 def run_cli() -> None:
     runtime = build_runtime()
-    print(f"{__app_name__} {__version__} — Fase 1: cérebro básico integrado.")
+    print(f"{__app_name__} {__version__} — Fase 2: Memory Engine 4.0 em construção.")
     session = _authenticate(runtime)
     if session.is_guest:
         print(f"Huli: Bem-vindo, {session.username}. Modo visitante com acesso limitado.")
         print("Visitante pode usar conversa básica, horário, ping e status.")
     else:
         print(f"Huli: Bem-vindo, {session.username}.")
-    print("Recursos atuais: contexto curto, tarefas, agenda, resumo diário, conversa básica e contexto de projeto.")
+    print(
+        "Recursos atuais: contexto, tarefas, agenda, resumo, conversa, projetos "
+        "e memória de longo prazo controlada."
+    )
     print("Digite 'sair' para encerrar.")
     try:
         while True:
