@@ -42,6 +42,11 @@ Fase 4.2 — Cofre Pessoal Seguro: aprovada
 
 ## CI
 
-A validação em Python 3.11 no Linux e no Windows será registrada após a
-publicação da branch no GitHub. A `main` permanece sem alterações durante o
-staging.
+- Workflow: [Huli CI #237](https://github.com/RonySan/HULI-4/actions/runs/33107188469)
+- Commit remoto validado: `7b5de227f7d9f5f78408ab36db9f057af2baa271`
+- Python: `3.11`
+- Ubuntu (`ubuntu-latest`): aprovado
+- Windows (`windows-latest`): aprovado
+- Ruff, 146 testes e validadores das Fases 0 a 4.2: aprovados nos dois sistemas
+
+A `main` permaneceu sem alterações durante o staging.
