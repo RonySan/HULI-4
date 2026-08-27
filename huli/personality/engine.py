@@ -70,6 +70,13 @@ class PersonalityEngine:
             reason = "identity-question"
         elif (
             intent == "unknown"
+            and active_project
+            and self._looks_like_project_note(text, normalized, active_project)
+        ):
+            resolved_intent = "project.note"
+            reason = "active-project-note"
+        elif (
+            intent == "unknown"
             and last_intent == "smalltalk"
             and normalized in self._SOCIAL_FOLLOWUPS
         ):
@@ -151,6 +158,12 @@ class PersonalityEngine:
                 "estruturado sem inventar o que não está registrado."
             )
 
+        if re.search(
+            r"\b(?:vamos (?:comecar|iniciar)(?: os)? trabalhos|vamos trabalhar|podemos comecar)\b",
+            normalized,
+        ):
+            return f"Certo{suffix}. Estou pronta para começar. Qual é a primeira prioridade?"
+
         if (
             "como voce esta" in normalized
             or "como vc ta" in normalized
@@ -183,6 +196,29 @@ class PersonalityEngine:
         return bool(
             re.search(
                 r"\b(?:o que significa|qual o significado|significado de)\s+huli\b",
+                normalized,
+            )
+        )
+
+    @staticmethod
+    def _looks_like_project_note(
+        raw_text: str,
+        normalized: str,
+        active_project: str,
+    ) -> bool:
+        if raw_text.rstrip().endswith("?"):
+            return False
+        if re.match(
+            r"^(?:o que|qual|como|quem|onde|quando|por que|porque)\b",
+            normalized,
+        ):
+            return False
+        project = normalize_text(active_project)
+        if not project or project not in normalized:
+            return False
+        return bool(
+            re.search(
+                r"\b(?:e|eh|esta|foi|tem|possui|usa|precisa|depende|apresenta|serve|funciona|desenvolvido|desenvolvida)\b",
                 normalized,
             )
         )

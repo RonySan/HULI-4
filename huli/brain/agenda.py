@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from huli.core.events import EventBus
@@ -25,7 +25,15 @@ class AgendaService:
 
     def today(self, now: datetime | None = None) -> tuple[AppointmentRecord, ...]:
         reference = (now or self.now()).astimezone(self.timezone)
-        start = reference.replace(hour=0, minute=0, second=0, microsecond=0)
+        return self.on_date(reference.date())
+
+    def on_date(self, target: date) -> tuple[AppointmentRecord, ...]:
+        start = datetime(
+            target.year,
+            target.month,
+            target.day,
+            tzinfo=self.timezone,
+        )
         end = start + timedelta(days=1)
         return self.repository.list_between(start, end)
 

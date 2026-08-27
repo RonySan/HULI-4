@@ -55,7 +55,7 @@ A branch `phase-0-foundation` contém:
 - API FastAPI autenticada
 - terminal com setup/login na primeira execução
 - Ruff como gate de qualidade
-- pytest + testes HTTP com HTTPX/TestClient
+- pytest + testes HTTP com HTTPX2/TestClient
 - GitHub Actions CI
 - documentação da fundação
 

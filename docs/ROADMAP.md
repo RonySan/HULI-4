@@ -369,8 +369,12 @@ Durante construção:
 
 ```text
 Huli 4.0
-└── Fase 0
-    └── Fundação arquitetural
+├── Fases 0–3
+│   └── regressões automatizadas preservadas
+└── Fase 4 staging
+    └── personalidade, conversa e linguagem natural — 4.0.0-alpha.10
 ```
 
-A primeira HULI permanece como referência histórica. A nova Huli reaproveita conhecimento e decisões válidas, mas não herda a arquitetura antiga por cópia.
+A primeira HULI permanece como referência histórica. A nova Huli reaproveita
+conhecimento e decisões válidas, mas não herda a arquitetura antiga por cópia.
+A Fase 5 não começa antes da validação e estabilização formal da Fase 4.

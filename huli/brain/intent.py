@@ -13,6 +13,7 @@ from huli.brain.normalization import normalize_text
 class IntentName(StrEnum):
     SYSTEM_STATUS = "system.status"
     TIME_QUERY = "time.query"
+    DATE_QUERY = "date.query"
     AGENDA_QUERY = "agenda.query"
     AGENDA_CREATE = "agenda.create"
     AGENDA_CANCEL = "agenda.cancel"
@@ -21,8 +22,10 @@ class IntentName(StrEnum):
     TASK_COMPLETE = "task.complete"
     DAILY_SUMMARY = "daily.summary"
     SMALL_TALK = "smalltalk"
+    CONVERSATION_RECAP = "conversation.recap"
     PROJECT_SET = "project.set"
     PROJECT_QUERY = "project.query"
+    PROJECT_NOTE = "project.note"
     MEMORY_REMEMBER = "memory.remember"
     MEMORY_RECALL = "memory.recall"
     MEMORY_LIST = "memory.list"
@@ -116,6 +119,14 @@ class IntentEngine:
                 "project-query",
             ),
             _IntentRule(
+                IntentName.CONVERSATION_RECAP,
+                re.compile(
+                    r"^(?:o que (?:nos |a gente )?(?:conversamos|conversou|falamos|falou)(?: mais cedo| hoje| anteriormente| ate agora)?|sobre o que (?:nos |a gente )?(?:conversamos|conversou|falamos|falou)(?: mais cedo| hoje)?|(?:relembre|resuma) (?:a |nossa )?conversa(?: de hoje| ate agora)?|o que foi conversado(?: mais cedo| hoje)?)$"
+                ),
+                0.99,
+                "conversation-recap",
+            ),
+            _IntentRule(
                 IntentName.TASK_COMPLETE,
                 re.compile(
                     r"^(?:conclui|concluir|conclua|finaliza|finalizar|finalize|marque|marca)\b.*\btarefa\b|^(?:conclui|concluir|conclua|finaliza|finalizar|finalize)\s+#?\d+\b"
@@ -150,7 +161,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_CREATE,
                 re.compile(
-                    r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\b.*\b(?:hoje|amanha|dia\s+\d{1,2}|\d{1,2}/\d{1,2})\b.*(?:\bas\b|\d{1,2}:\d{2})"
+                    r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\b.*(?:\bas\s+\d{1,2}(?::\d{2})?\s*(?:h|horas)?\b|\b\d{1,2}:\d{2}\b)"
                 ),
                 0.97,
                 "agenda-create",
@@ -166,7 +177,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_QUERY,
                 re.compile(
-                    r"\b(?:minha agenda|agenda de hoje|agenda hoje|compromissos hoje|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer hoje\b|\bo que (?:eu )?tenho hoje\b"
+                    r"^(?:agenda|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:de )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:hoje|amanha)\b"
                 ),
                 0.96,
                 "agenda-query",
@@ -188,9 +199,17 @@ class IntentEngine:
                 "time-query",
             ),
             _IntentRule(
+                IntentName.DATE_QUERY,
+                re.compile(
+                    r"^(?:que dia (?:e|eh) hoje|qual (?:e )?a data(?: de hoje| hoje)?|data de hoje|qual dia (?:e|eh) hoje|em que dia estamos)(?: por favor)?$"
+                ),
+                0.99,
+                "date-query",
+            ),
+            _IntentRule(
                 IntentName.SMALL_TALK,
                 re.compile(
-                    r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: bom dia| boa tarde| boa noite)?|(?:bom dia|boa tarde|boa noite)(?: huli)?|(?:como (?:voce|vc) (?:esta|ta)|tudo bem)(?: huli)?|(?:quem e voce|quem e a huli)(?: huli)?|(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?|(?:tchau|ate logo|ate mais)(?: huli)?)$"
+                    r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: bom dia| boa tarde| boa noite)?|(?:bom dia|boa tarde|boa noite)(?: huli)?|(?:como (?:voce|vc) (?:esta|ta)|tudo bem)(?: huli)?|(?:quem e voce|quem e a huli)(?: huli)?|(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?|(?:tchau|ate logo|ate mais)(?: huli)?|(?:(?:ok|certo|beleza) )?(?:entao )?(?:vamos (?:comecar|iniciar)(?: os)? trabalhos(?: de hoje)?|vamos trabalhar|podemos comecar))$"
                 ),
                 0.95,
                 "small-talk",

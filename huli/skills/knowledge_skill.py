@@ -16,6 +16,10 @@ _PREDICATE_LABELS = {
     "cliente_de": "cliente de",
 }
 
+_FACT_LABELS = {
+    "descricao": "descrição",
+}
+
 
 class KnowledgeSkill:
     name = "knowledge"
@@ -66,7 +70,8 @@ class KnowledgeSkill:
         snapshot = self._knowledge.describe(owner=owner, query=query)
         lines = [f"{snapshot.entity.name} [{snapshot.entity.kind.value}]"]
         for fact in snapshot.facts:
-            lines.append(f"- {fact.key}: {fact.value}")
+            label = _FACT_LABELS.get(fact.key, fact.key.replace("_", " "))
+            lines.append(f"- {label}: {fact.value}")
         seen_relations: set[tuple[str, int, str]] = set()
         for relation, target in snapshot.outgoing:
             key = (relation.predicate, target.id, "out")

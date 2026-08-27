@@ -11,7 +11,9 @@ class SecurityPolicy:
     max_input_chars: int = 10_000
     session_hours: int = 24 * 7
     guest_commands: frozenset[str] = frozenset({"ping", "status", "status huli", "teste", "teste skill"})
-    guest_intents: frozenset[str] = frozenset({"smalltalk", "time.query", "system.status"})
+    guest_intents: frozenset[str] = frozenset(
+        {"smalltalk", "time.query", "date.query", "system.status"}
+    )
 
     def validate_password(self, password: str) -> None:
         if not isinstance(password, str):

@@ -28,7 +28,11 @@ def strip_huli_prefix(text: str) -> str:
 
 def parse_priority(text: str) -> str:
     normalized = normalize(text)
-    if "prioridade alta" in normalized or "urgente" in normalized:
+    if (
+        "prioridade alta" in normalized
+        or "prioridade alto" in normalized
+        or "urgente" in normalized
+    ):
         return "alta"
     if "prioridade baixa" in normalized:
         return "baixa"
@@ -48,7 +52,7 @@ def extract_task_title(text: str) -> str:
             value = updated.strip()
             break
     value = re.sub(
-        r"\bprioridade\s+(?:alta|normal|baixa)\b",
+        r"\bprioridade\s+(?:alta|alto|normal|baixa|baixo)\b",
         "",
         value,
         flags=re.IGNORECASE,
@@ -191,8 +195,16 @@ def parse_appointment_request(
             else:
                 raise ValueError("Não consegui determinar a data do compromisso.")
         else:
-            raise ValueError(
-                "Informe a data do compromisso, por exemplo: hoje ou amanhã."
+            candidate = reference.replace(
+                hour=hour,
+                minute=minute,
+                second=0,
+                microsecond=0,
+            )
+            target_date = (
+                reference.date()
+                if candidate > reference
+                else (reference + timedelta(days=1)).date()
             )
 
     start_at = datetime(
@@ -206,7 +218,7 @@ def parse_appointment_request(
 
     title = raw
     title = re.sub(
-        r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\s+(?:um\s+)?(?:compromisso|evento|agendamento)?\s*",
+        r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\s+(?:(?:para|pra)\s+mim\s+)?(?:(?:um|uma)\s+)?(?:(?:compromisso|evento|agendamento)\s+)?",
         "",
         title,
         flags=re.IGNORECASE,
@@ -236,3 +248,20 @@ def parse_appointment_request(
         raise ValueError("Informe o assunto do compromisso.")
 
     return title, start_at
+
+
+def split_project_update(text: str) -> tuple[str, str | None]:
+    """Separa uma informação de projeto de uma tarefa explícita no mesmo texto."""
+
+    raw = strip_huli_prefix(text).strip(" .")
+    task_match = re.search(
+        r"\s*[,;:\-]?\s*(?:(?:e|mas)\s+)?(?:(?:depois|tamb[eé]m)\s+)?(?:precisamos|preciso|temos\s+que|tenho\s+que)\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if task_match is None:
+        return raw, None
+
+    note = raw[: task_match.start()].strip(" ,;:.-")
+    task = " ".join(task_match.group(1).split()).strip(" ,;:.-")
+    return note or raw, task or None

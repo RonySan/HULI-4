@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from huli.brain.agenda import AgendaService
 from huli.core.contracts import KernelRequest, KernelResponse
-from huli.skills.parsing import extract_cancel_target, parse_appointment_request
+from huli.skills.parsing import (
+    extract_cancel_target,
+    normalize,
+    parse_appointment_request,
+)
 
 
 class AgendaSkill:
@@ -33,11 +37,37 @@ class AgendaSkill:
             project_label = f" no projeto {project}" if project else ""
             return self._response(request, f"Compromisso #{item.id} agendado{project_label} para {local.strftime('%d/%m/%Y às %H:%M')}: {item.title}.")
         if intent == "agenda.query":
-            normalized = request.text.casefold()
-            items = self.agenda.today() if "hoje" in normalized else self.agenda.upcoming(limit=10)
+            normalized = normalize(request.text)
+            reference = self.agenda.now()
+            if "amanha" in normalized:
+                items = self.agenda.on_date(reference.date() + timedelta(days=1))
+                empty_message = "Não há compromissos para amanhã."
+                heading = "Compromissos de amanhã:"
+            elif "noite" in normalized:
+                items = tuple(
+                    item
+                    for item in self.agenda.today(reference)
+                    if datetime.fromisoformat(item.start_at).astimezone(
+                        self.agenda.timezone
+                    ).hour
+                    >= 18
+                )
+                empty_message = "Não há compromissos para esta noite."
+                heading = "Compromissos desta noite:"
+            elif "hoje" in normalized or normalized in {
+                "agenda",
+                "minha agenda",
+                "nossa agenda",
+            }:
+                items = self.agenda.today(reference)
+                empty_message = "Não há compromissos para hoje."
+                heading = "Compromissos de hoje:"
+            else:
+                items = self.agenda.upcoming(reference, limit=10)
+                empty_message = "Não há próximos compromissos."
+                heading = "Próximos compromissos:"
             if not items:
-                return self._response(request, "Não há compromissos para hoje." if "hoje" in normalized else "Não há próximos compromissos.")
-            heading = "Compromissos de hoje:" if "hoje" in normalized else "Próximos compromissos:"
+                return self._response(request, empty_message)
             lines = [heading]
             for item in items:
                 local = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)

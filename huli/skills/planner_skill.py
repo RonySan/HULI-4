@@ -26,7 +26,15 @@ class PlannerSkill:
                 return self._response(request, "Não consegui identificar o título da tarefa.", ok=False)
             task = self.planner.create_task(title, priority=parse_priority(request.text), project=project)
             suffix = f" no projeto {task.project}" if task.project else ""
-            return self._response(request, f"Tarefa #{task.id} criada{suffix}: {task.title}.")
+            priority = (
+                f" com prioridade {task.priority}"
+                if task.priority != "normal"
+                else ""
+            )
+            return self._response(
+                request,
+                f"Tarefa #{task.id} criada{suffix}{priority}: {task.title}.",
+            )
         if intent == "task.list":
             tasks = self.planner.pending(project=project, limit=20)
             if not tasks:

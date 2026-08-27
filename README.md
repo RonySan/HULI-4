@@ -21,12 +21,14 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-**Versão:** `4.0.0-alpha.4`  
-**Fase atual:** Fase 1 — Cérebro básico  
-**Módulo atual:** Intent Engine  
-**Branch de desenvolvimento:** `phase-1-brain`
+- **Versão:** `4.0.0-alpha.10`
+- **Fase atual:** Fase 4 staging — Personalidade e Conversação
+- **Módulo atual:** linguagem natural determinística e continuidade da sessão
+- **Branch de desenvolvimento:** `phase-4-personality-staging`
 
-A Fase 0 foi concluída e mergeada em `main` na versão `4.0.0-alpha.3`.
+As regressões das Fases 0 a 3 são executadas antes da validação da Fase 4. A
+`main` continua protegida; código de staging só deve ser integrado depois da
+validação local do usuário e do CI.
 
 ## Fluxo atual
 
@@ -41,13 +43,17 @@ Kernel
         ↓
 kernel.request.received
         ↓
-Intent Engine
+Intent Engine + Context Engine
         ↓
-brain.intent.classified
+Personality Engine
         ↓
 SkillRegistry
         ↓
 Skill
+  ├── tarefas e agenda
+  ├── memória de longo prazo
+  ├── conhecimento estruturado
+  └── continuidade da conversa
         ↓
 KernelResponse
         ↓
@@ -56,19 +62,37 @@ EventBus
 SQLite
 ```
 
-O Intent Engine classifica intenções fundamentais de forma local e determinística. Ele não executa ações e não utiliza OpenAI/Ollama.
+O cérebro local classifica intenções, mantém contexto curto e executa Skills de
+forma determinística. Personalidade nunca altera fatos, permissões ou decisões
+de domínio. OpenAI e Ollama continuam fora desta fase.
 
-## Intenções iniciais
+## Capacidades atuais
 
 - `system.status`
 - `time.query`
+- `date.query`
 - `agenda.query`
+- `agenda.create`
+- `agenda.cancel`
 - `task.create`
+- `task.list`
+- `task.complete`
 - `smalltalk`
+- `conversation.recap`
+- `project.set`
+- `project.note`
 - `project.query`
+- `memory.remember`
+- `memory.recall`
+- `memory.list`
+- `memory.forget`
+- `knowledge.describe`
+- `knowledge.relation`
 - `unknown`
 
-Agenda, Planner, Small Talk e Project Context ainda serão implementados nas próximas etapas da Fase 1. A existência de uma intenção não significa que a capacidade já esteja disponível.
+A `alpha.10` também entende variações naturais verificadas no uso real, como
+“que dia é hoje?”, “como está nossa agenda essa noite?”, “agenda pra mim jantar
+às 22 horas” e “o que conversamos mais cedo?”.
 
 ## Instalação de desenvolvimento
 
@@ -85,6 +109,7 @@ python -m pip install -e ".[dev]"
 ```powershell
 python -m ruff check .
 python -m pytest
+powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE4.ps1
 ```
 
 O CI executa em Linux e Windows nas branches `phase-*` e em `main`.
@@ -116,6 +141,10 @@ A API ainda não deve ser exposta diretamente à internet.
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - [`docs/PHASE_1_PLAN.md`](docs/PHASE_1_PLAN.md)
+- [`docs/PHASE_2_PLAN.md`](docs/PHASE_2_PLAN.md)
+- [`docs/PHASE_3_STAGING.md`](docs/PHASE_3_STAGING.md)
+- [`docs/PHASE_4_STAGING.md`](docs/PHASE_4_STAGING.md)
+- [`docs/PHASE_4_VALIDATION.md`](docs/PHASE_4_VALIDATION.md)
 - [`docs/INTENT_ENGINE.md`](docs/INTENT_ENGINE.md)
 - [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)

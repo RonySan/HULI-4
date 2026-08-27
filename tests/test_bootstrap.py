@@ -18,6 +18,7 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "agenda",
         "daily-summary",
         "smalltalk",
+        "conversation",
         "project-context",
         "memory",
         "knowledge",

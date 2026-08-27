@@ -298,8 +298,9 @@ class MemoryKnowledgeSynchronizer:
 
     def sync_memory(self, memory: MemoryRecord) -> int:
         created = 0
+        project_entity: KnowledgeEntity | None = None
         if memory.project:
-            self.knowledge.ensure_entity(
+            project_entity = self.knowledge.ensure_entity(
                 owner=memory.owner,
                 name=memory.project,
                 kind=EntityKind.PROJECT,
@@ -318,14 +319,31 @@ class MemoryKnowledgeSynchronizer:
             )
             created += 1
         elif memory.kind is MemoryKind.PROJECT and memory.subject:
-            self.knowledge.ensure_entity(
-                owner=memory.owner,
-                name=memory.subject,
-                kind=EntityKind.PROJECT,
-                sensitivity=memory.sensitivity,
-                source_memory_id=memory.id,
-            )
-            created += 1
+            subject_entity = project_entity
+            if (
+                subject_entity is None
+                or normalize_knowledge_text(subject_entity.name)
+                != normalize_knowledge_text(memory.subject)
+            ):
+                subject_entity = self.knowledge.ensure_entity(
+                    owner=memory.owner,
+                    name=memory.subject,
+                    kind=EntityKind.PROJECT,
+                    sensitivity=memory.sensitivity,
+                    source_memory_id=memory.id,
+                )
+                created += 1
+            if memory.metadata.get("origin") == "project.note":
+                self.knowledge.add_fact(
+                    owner=memory.owner,
+                    entity=subject_entity,
+                    key="descrição",
+                    value=memory.content,
+                    sensitivity=memory.sensitivity,
+                    confidence=memory.confidence,
+                    source_memory_id=memory.id,
+                )
+                created += 1
 
         for pattern, predicate in self._RELATION_PATTERNS:
             match = pattern.match(memory.content.strip(" ."))

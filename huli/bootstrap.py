@@ -40,6 +40,7 @@ from huli.personality import PersonalityEngine
 from huli.security import AuthService, SecurityPolicy
 from huli.skills import (
     AgendaSkill,
+    ConversationSkill,
     DailySummarySkill,
     FoundationSkill,
     KnowledgeSkill,
@@ -118,7 +119,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(DailySummarySkill(daily_summary))
     skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
-    skills.register(ProjectContextSkill(context, planner))
+    skills.register(ConversationSkill(context))
+    skills.register(ProjectContextSkill(context, planner, memory))
     skills.register(MemorySkill(memory))
     skills.register(KnowledgeSkill(knowledge))
 

@@ -130,7 +130,7 @@ Nenhum segredo deve ser versionado. `.env.example` contém apenas valores seguro
 O pacote de desenvolvimento instala:
 
 - pytest
-- HTTPX para testes da API
+- HTTPX2 para testes da API
 - Ruff para lint/imports
 
 O workflow `.github/workflows/ci.yml` executa em Python 3.11:

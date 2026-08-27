@@ -35,6 +35,10 @@ def run_validation() -> None:
 
         require(runtime.database.schema_version() >= 6, "Schema mínimo da staging não está ativo.")
         require(
+            "conversation" in runtime.skills.names,
+            "ConversationSkill não foi registrada.",
+        )
+        require(
             runtime.personality.decide(text="oi huli", intent="smalltalk").mode
             is ConversationMode.CASUAL,
             "Modo casual falhou.",
@@ -63,6 +67,44 @@ def run_validation() -> None:
         require(greeting.handled_by == "smalltalk", "Saudação não chegou ao Small Talk.")
         require(followup.handled_by == "smalltalk", "Continuidade social curta falhou.")
 
+        work_start = runtime.kernel.process(
+            "ok, então vamos começar os trabalhos de hoje",
+            metadata=meta,
+        )
+        require(
+            work_start.handled_by == "smalltalk"
+            and "primeira prioridade" in work_start.text.casefold(),
+            "Início natural do trabalho não foi reconhecido.",
+        )
+
+        date = runtime.kernel.process("que dia é hoje?", metadata=meta)
+        require(
+            date.handled_by == "time" and date.text.startswith("Hoje é "),
+            "Consulta natural da data falhou.",
+        )
+
+        for agenda_query in (
+            "como está a agenda pra hoje?",
+            "como está nossa agenda essa noite?",
+            "agenda",
+        ):
+            agenda_response = runtime.kernel.process(agenda_query, metadata=meta)
+            require(
+                agenda_response.handled_by == "agenda",
+                f"Consulta natural de agenda falhou: {agenda_query}",
+            )
+
+        natural_appointment = runtime.kernel.process(
+            "agenda pra mim jantar às 22 horas com a Gisele",
+            metadata=meta,
+        )
+        require(
+            natural_appointment.handled_by == "agenda"
+            and natural_appointment.ok
+            and runtime.agenda.upcoming(limit=10),
+            "Criação natural de compromisso sem data explícita falhou.",
+        )
+
         identity = runtime.kernel.process("o que significa Huli?", metadata=meta)
         require(
             "Humano Único Leal Inteligente" in identity.text,
@@ -74,6 +116,45 @@ def run_validation() -> None:
         require(
             "seguir com o trabalho" in work_tone.text.casefold(),
             "Contexto de trabalho não selecionou resposta profissional.",
+        )
+
+        project_update = runtime.kernel.process(
+            "o Medynx é um novo projeto desenvolvido para clínicas, "
+            "depois precisamos rever os logins dos pacientes",
+            metadata=meta,
+        )
+        require(
+            project_update.handled_by == "project-context" and project_update.ok,
+            "Informação natural do projeto não foi registrada.",
+        )
+        require(
+            runtime.tasks.list_pending(project="Medynx"),
+            "Tarefa embutida na atualização do projeto não foi criada.",
+        )
+        project_knowledge = runtime.kernel.process(
+            "o que você sabe sobre Medynx?",
+            metadata=meta,
+        )
+        require(
+            "descrição:" in project_knowledge.text,
+            "Atualização natural não chegou ao Knowledge Graph.",
+        )
+
+        priority = runtime.kernel.process(
+            "adiciona uma tarefa revisar o banco prioridade alto",
+            metadata=meta,
+        )
+        require(
+            "prioridade alta" in priority.text
+            and runtime.tasks.list_pending(project="Medynx")[0].priority == "alta",
+            "Variação 'prioridade alto' não foi normalizada.",
+        )
+
+        recap = runtime.kernel.process("o que conversamos mais cedo?", metadata=meta)
+        require(
+            recap.handled_by == "conversation"
+            and "Medynx" in recap.text,
+            "Resumo factual da conversa atual falhou.",
         )
 
         runtime.kernel.process(
