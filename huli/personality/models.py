@@ -9,6 +9,7 @@ from enum import StrEnum
 class ConversationMode(StrEnum):
     CASUAL = "casual"
     PROFESSIONAL = "professional"
+    PRIVATE = "private"
     SERIOUS = "serious"
     RISK = "risk"
 
@@ -21,6 +22,7 @@ class PersonalityProfile:
     concise: bool = True
     casual_humor: bool = True
     professional_humor: bool = False
+    private_humor: bool = False
     serious_humor: bool = False
     risk_humor: bool = False
 

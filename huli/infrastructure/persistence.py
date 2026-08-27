@@ -8,6 +8,7 @@ import json
 
 from huli.core.events import Event, EventBus
 from huli.infrastructure.database import SQLiteDatabase
+from huli.security.privacy import PRIVATE_JOURNAL_REDACTION, is_private_journal_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,29 +102,50 @@ class RuntimeRecorder:
     ) -> None:
         self._event_repository = event_repository
         self._interaction_repository = interaction_repository
-        self._pending: dict[str, str] = {}
+        self._pending: dict[str, tuple[str, bool]] = {}
         event_bus.subscribe("kernel.request.received", self._on_request)
         event_bus.subscribe("kernel.response.created", self._on_response)
 
     def _on_request(self, event: Event) -> None:
-        self._event_repository.add(event)
         request_id = str(event.payload.get("request_id", ""))
         text = str(event.payload.get("text", ""))
+        is_private = is_private_journal_text(text)
+        self._event_repository.add(
+            self._redact_event(event) if is_private else event
+        )
         if request_id:
-            self._pending[request_id] = text
+            self._pending[request_id] = (text, is_private)
 
     def _on_response(self, event: Event) -> None:
-        self._event_repository.add(event)
         request_id = str(event.payload.get("request_id", ""))
-        user_text = self._pending.pop(request_id, "")
+        user_text, request_is_private = self._pending.pop(request_id, ("", False))
+        response_text = str(event.payload.get("text", ""))
+        is_private = request_is_private or is_private_journal_text(response_text)
+        self._event_repository.add(
+            self._redact_event(event) if is_private else event
+        )
         if not request_id:
             return
         self._interaction_repository.add(
             Interaction(
                 request_id=request_id,
-                user_text=user_text,
-                response_text=str(event.payload.get("text", "")),
+                user_text=(PRIVATE_JOURNAL_REDACTION if is_private else user_text),
+                response_text=(
+                    PRIVATE_JOURNAL_REDACTION if is_private else response_text
+                ),
                 handled_by=str(event.payload.get("handled_by", "unknown")),
                 ok=bool(event.payload.get("ok", False)),
             )
+        )
+
+    @staticmethod
+    def _redact_event(event: Event) -> Event:
+        payload = dict(event.payload)
+        if "text" in payload:
+            payload["text"] = PRIVATE_JOURNAL_REDACTION
+        return Event(
+            name=event.name,
+            payload=payload,
+            event_id=event.event_id,
+            created_at=event.created_at,
         )

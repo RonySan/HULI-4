@@ -14,6 +14,7 @@ from huli.personality.models import (
     DEFAULT_PROFILE,
     PersonalityProfile,
 )
+from huli.security.privacy import is_private_journal_text
 
 
 class PersonalityEngine:
@@ -28,7 +29,9 @@ class PersonalityEngine:
     _RISK_INTENTS = {
         "memory.forget",
         "agenda.cancel",
+        "journal.delete",
     }
+    _PRIVATE_PREFIXES = ("journal.",)
     _SOCIAL_FOLLOWUPS = {
         "e voce",
         "e vc",
@@ -68,6 +71,9 @@ class PersonalityEngine:
         if intent == "unknown" and self._asks_acronym_meaning(normalized):
             resolved_intent = "smalltalk"
             reason = "identity-question"
+        elif intent == "unknown" and is_private_journal_text(text):
+            resolved_intent = "journal.help"
+            reason = "private-journal-fallback"
         elif (
             intent == "unknown"
             and active_project
@@ -88,6 +94,9 @@ class PersonalityEngine:
         if explicit_risk or resolved_intent in self._RISK_INTENTS:
             mode = ConversationMode.RISK
             reason = "risk"
+        elif resolved_intent.startswith(self._PRIVATE_PREFIXES):
+            mode = ConversationMode.PRIVATE
+            reason = "private"
         elif re.search(
             r"\b(?:urgente|grave|serio|sério|falha critica|falha crítica|emergencia|emergência)\b",
             text,

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 7
 
 
 class SQLiteDatabase:
@@ -62,6 +62,9 @@ class SQLiteDatabase:
             if 6 not in applied:
                 self._migration_006_knowledge(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (6)")
+            if 7 not in applied:
+                self._migration_007_journal(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (7)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -285,6 +288,33 @@ class SQLiteDatabase:
             );
             CREATE INDEX IF NOT EXISTS idx_knowledge_facts_entity
             ON knowledge_facts(owner, entity_id, key, is_active);
+            """
+        )
+
+    @staticmethod
+    def _migration_007_journal(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS journal_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                content TEXT NOT NULL,
+                search_text TEXT NOT NULL,
+                entry_date TEXT NOT NULL,
+                mood TEXT,
+                tags_json TEXT NOT NULL DEFAULT '[]',
+                sensitivity TEXT NOT NULL DEFAULT 'normal',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                deleted_at TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_journal_owner_date_active
+            ON journal_entries(owner, entry_date, is_active, created_at);
+
+            CREATE INDEX IF NOT EXISTS idx_journal_owner_search_active
+            ON journal_entries(owner, search_text, is_active);
             """
         )
 

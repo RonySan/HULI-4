@@ -25,6 +25,7 @@ from huli.infrastructure import (
     configure_logging,
     load_settings,
 )
+from huli.journal import JournalPolicy, JournalRepository, JournalService
 from huli.knowledge import (
     KnowledgeRepository,
     KnowledgeService,
@@ -43,6 +44,7 @@ from huli.skills import (
     ConversationSkill,
     DailySummarySkill,
     FoundationSkill,
+    JournalSkill,
     KnowledgeSkill,
     MemorySkill,
     PlannerSkill,
@@ -68,6 +70,8 @@ class HuliRuntime:
     memory_repository: MemoryRepository
     knowledge: KnowledgeService
     knowledge_repository: KnowledgeRepository
+    journal: JournalService
+    journal_repository: JournalRepository
     dispatcher: BrainDispatcher
     kernel: Kernel
     logger: logging.Logger
@@ -85,6 +89,12 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
 
     database = SQLiteDatabase(resolved_settings.database_path)
     database.initialize()
+
+    security = SecurityPolicy(
+        max_input_chars=resolved_settings.max_input_chars,
+        session_hours=resolved_settings.session_hours,
+    )
+    auth = AuthService(database, security)
 
     events = EventBus()
     event_repository = EventRepository(database)
@@ -105,6 +115,14 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     knowledge = KnowledgeService(knowledge_repository, events)
     MemoryKnowledgeSynchronizer(events, memory_repository, knowledge)
 
+    journal_repository = JournalRepository(database)
+    journal = JournalService(
+        journal_repository,
+        JournalPolicy(),
+        events,
+        resolved_settings.timezone,
+    )
+
     intents = IntentEngine()
     context = ContextEngine(max_turns=resolved_settings.context_turns)
     personality = PersonalityEngine(
@@ -120,6 +138,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(DailySummarySkill(daily_summary))
     skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
     skills.register(ConversationSkill(context))
+    skills.register(JournalSkill(journal, resolved_settings.timezone, auth))
     skills.register(ProjectContextSkill(context, planner, memory))
     skills.register(MemorySkill(memory))
     skills.register(KnowledgeSkill(knowledge))
@@ -131,11 +150,6 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         event_bus=events,
         personality=personality,
     )
-    security = SecurityPolicy(
-        max_input_chars=resolved_settings.max_input_chars,
-        session_hours=resolved_settings.session_hours,
-    )
-    auth = AuthService(database, security)
     kernel = Kernel(handler=dispatcher, event_bus=events)
 
     logger.info(
@@ -159,6 +173,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         memory_repository=memory_repository,
         knowledge=knowledge,
         knowledge_repository=knowledge_repository,
+        journal=journal,
+        journal_repository=journal_repository,
         dispatcher=dispatcher,
         kernel=kernel,
         logger=logger,

@@ -61,6 +61,7 @@ class ConversationSkill:
             turn
             for turn in turns
             if turn.intent not in {"smalltalk", "conversation.recap", "unknown"}
+            and not turn.intent.startswith("journal.")
         )
         return useful[-4:]
 

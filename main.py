@@ -31,7 +31,9 @@ def _first_run_setup(runtime: HuliRuntime) -> CliSession:
         print("Huli: Continuando como visitante. O proprietário pode ser configurado depois.")
         return CliSession(username="Visitante", role="guest")
     while True:
-        password = getpass("Nova senha (opcional, Enter = sem senha): ").strip()
+        password = getpass(
+            "Nova senha (opcional; o diário privado exige senha): "
+        ).strip()
         if password:
             confirmation = getpass("Confirme a senha: ").strip()
             if password != confirmation:
@@ -91,7 +93,7 @@ def _metadata(session: CliSession) -> dict[str, object]:
 
 def run_cli() -> None:
     runtime = build_runtime()
-    print(f"{__app_name__} {__version__} — Fase 4 staging: personalidade e conversação.")
+    print(f"{__app_name__} {__version__} — Fase 4.1 staging: diário pessoal privado.")
     session = _authenticate(runtime)
     if session.is_guest:
         print(f"Huli: Bem-vindo, {session.username}. Modo visitante com acesso limitado.")
@@ -100,8 +102,17 @@ def run_cli() -> None:
         print(f"Huli: Bem-vindo, {session.username}.")
     print(
         "Recursos atuais: contexto, tarefas, agenda, resumo, projetos, memória, "
-        "conhecimento estruturado e personalidade contextual."
+        "conhecimento estruturado, personalidade contextual e diário privado."
     )
+    if not session.is_guest and runtime.auth.requires_password(session.username):
+        print(
+            "Diário: use 'diário: seu texto' ou 'como uso meu diário?' para ver os exemplos."
+        )
+    elif not session.is_guest:
+        print(
+            "Diário bloqueado: configure uma senha com "
+            "'python tools/set_local_password.py'."
+        )
     print("Digite 'sair' para encerrar.")
     try:
         while True:

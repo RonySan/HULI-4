@@ -36,7 +36,7 @@ def run_validation() -> None:
             "role": "owner",
         }
 
-        require(runtime.database.schema_version() == 6, "Schema 6 não foi aplicado.")
+        require(runtime.database.schema_version() >= 6, "Schema 6 não foi aplicado.")
         require("knowledge" in runtime.skills.names, "KnowledgeSkill não foi registrada.")
 
         saved = runtime.kernel.process(

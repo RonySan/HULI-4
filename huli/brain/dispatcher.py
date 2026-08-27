@@ -9,6 +9,7 @@ from huli.brain.intent import IntentEngine
 from huli.core.contracts import KernelHandler, KernelRequest, KernelResponse
 from huli.core.events import EventBus
 from huli.personality import PersonalityEngine
+from huli.security.privacy import PRIVATE_JOURNAL_REDACTION, is_private_journal_text
 from huli.skills.registry import SkillRegistry
 
 
@@ -103,9 +104,15 @@ class BrainDispatcher(KernelHandler):
             )
 
         topic = str(enriched.metadata.get("active_project") or "").strip() or None
+        observed_text = (
+            PRIVATE_JOURNAL_REDACTION
+            if intent_value.startswith("journal.")
+            or is_private_journal_text(request.text)
+            else request.text
+        )
         current = self._context.observe(
             session_id,
-            request.text,
+            observed_text,
             intent_value,
             topic=topic,
         )

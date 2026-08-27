@@ -116,6 +116,17 @@ class AuthService:
             )
             if cursor.rowcount != 1:
                 raise AuthenticationError("Usuário não encontrado.")
+            connection.execute(
+                """
+                UPDATE sessions
+                SET revoked_at = ?
+                WHERE user_id = (
+                    SELECT id FROM users WHERE username = ? COLLATE NOCASE
+                )
+                  AND revoked_at IS NULL
+                """,
+                (datetime.now(timezone.utc).isoformat(), normalized),
+            )
 
     def authenticate(self, username: str, password: str = "") -> tuple[AuthenticatedUser, str]:
         username = self._normalize_username(username)

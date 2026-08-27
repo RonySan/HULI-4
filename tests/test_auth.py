@@ -55,6 +55,19 @@ def test_owner_password_can_be_removed(tmp_path: Path) -> None:
     assert auth.validate_token(token) == user
 
 
+def test_changing_password_revokes_existing_sessions(tmp_path: Path) -> None:
+    auth = build_auth(tmp_path)
+    auth.create_owner("rony", "senha-segura-123")
+    _user, old_token = auth.authenticate("rony", "senha-segura-123")
+
+    auth.set_password("rony", "nova-senha-456")
+
+    with pytest.raises(AuthenticationError):
+        auth.validate_token(old_token)
+    user, new_token = auth.authenticate("rony", "nova-senha-456")
+    assert auth.validate_token(new_token) == user
+
+
 def test_whitespace_password_is_treated_as_empty(tmp_path: Path) -> None:
     auth = build_auth(tmp_path)
     auth.create_owner("rony", "   ")

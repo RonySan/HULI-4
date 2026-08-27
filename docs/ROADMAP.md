@@ -137,6 +137,25 @@ Inclui:
 - continuidade;
 - comportamento adequado ao contexto.
 
+### Fase 4.1 — Diário pessoal privado
+
+Evolução intermediária concluída antes da inteligência híbrida:
+
+- diário explícito e persistente;
+- separação total da memória automática e do Knowledge Graph;
+- consulta por data e busca textual;
+- humor declarado e etiquetas opcionais;
+- edição e exclusão lógica por identificador;
+- lixeira privada e restauração por identificador;
+- acesso exclusivo do proprietário;
+- redação do conteúdo em eventos, interações técnicas e contexto curto;
+- bloqueio de senhas, tokens e chaves;
+- mesma capacidade no terminal e na API autenticada.
+
+A criptografia em repouso depende de um cofre de chaves adequado e permanece
+planejada como endurecimento posterior. A alpha atual não simula criptografia
+guardando uma chave ao lado do banco.
+
 ---
 
 ## Fase 5 — Inteligência híbrida
@@ -372,9 +391,10 @@ Huli 4.0
 ├── Fases 0–3
 │   └── regressões automatizadas preservadas
 └── Fase 4 staging
-    └── personalidade, conversa e linguagem natural — 4.0.0-alpha.10
+    ├── personalidade, conversa e linguagem natural — 4.0.0-alpha.10
+    └── diário pessoal privado — 4.0.0-alpha.11
 ```
 
 A primeira HULI permanece como referência histórica. A nova Huli reaproveita
 conhecimento e decisões válidas, mas não herda a arquitetura antiga por cópia.
-A Fase 5 não começa antes da validação e estabilização formal da Fase 4.
+A Fase 5 não começa antes da validação e estabilização formal da Fase 4.1.

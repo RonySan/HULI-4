@@ -58,3 +58,6 @@ jobs:
 
       - name: Phase 4 Personality staging validation
         run: python tools/validate_phase4.py
+
+      - name: Phase 4.1 Private journal validation
+        run: python tools/validate_phase4_journal.py

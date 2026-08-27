@@ -7,6 +7,7 @@ HULI-4/
 ├── huli/
 │   ├── core/
 │   ├── brain/
+│   ├── journal/
 │   ├── memory/
 │   ├── skills/
 │   ├── agents/
@@ -35,6 +36,7 @@ Isso evita módulos globais genéricos como `core`, `memory` e `security`, reduz
 
 - `huli/core`: coordenação do ciclo de execução. O Kernel mora aqui e não deve acumular regras de domínio.
 - `huli/brain`: interpretação, contexto e componentes cognitivos locais.
+- `huli/journal`: diário privado, política, busca e persistência por proprietário.
 - `huli/memory`: mecanismos de persistência e recuperação de memória.
 - `huli/skills`: capacidades especializadas acionadas pelo núcleo.
 - `huli/agents`: agentes autônomos futuros. Não entram em operação antes da fase prevista.

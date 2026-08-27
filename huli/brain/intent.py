@@ -23,6 +23,14 @@ class IntentName(StrEnum):
     DAILY_SUMMARY = "daily.summary"
     SMALL_TALK = "smalltalk"
     CONVERSATION_RECAP = "conversation.recap"
+    JOURNAL_CREATE = "journal.create"
+    JOURNAL_LIST = "journal.list"
+    JOURNAL_SEARCH = "journal.search"
+    JOURNAL_UPDATE = "journal.update"
+    JOURNAL_DELETE = "journal.delete"
+    JOURNAL_TRASH = "journal.trash"
+    JOURNAL_RESTORE = "journal.restore"
+    JOURNAL_HELP = "journal.help"
     PROJECT_SET = "project.set"
     PROJECT_QUERY = "project.query"
     PROJECT_NOTE = "project.note"
@@ -54,6 +62,70 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.JOURNAL_RESTORE,
+                re.compile(
+                    r"^(?:restaure|restaurar|recupere|recuperar)\b.*\b(?:entrada|anotacao)\b.*\bdiario\b|^(?:restaure|restaurar|recupere|recuperar)\s+(?:a\s+)?#?\d+\s+(?:do|no)\s+(?:meu\s+)?diario$"
+                ),
+                0.995,
+                "journal-restore",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_TRASH,
+                re.compile(
+                    r"^(?:(?:mostre|liste|abra)\s+(?:a\s+)?lixeira\s+(?:do|no)\s+(?:meu\s+)?diario|lixeira\s+(?:do|no)\s+(?:meu\s+)?diario|(?:entradas|anotacoes)\s+apagadas\s+(?:do|no)\s+(?:meu\s+)?diario)$"
+                ),
+                0.99,
+                "journal-trash",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_DELETE,
+                re.compile(
+                    r"^(?:apague|apagar|exclua|excluir|remova|remover)\b.*\b(?:entrada|anotacao)\b.*\bdiario\b|^(?:apague|apagar|exclua|excluir|remova|remover)\s+(?:a\s+)?#?\d+\s+(?:do|no)\s+(?:meu\s+)?diario$"
+                ),
+                0.995,
+                "journal-delete",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_UPDATE,
+                re.compile(
+                    r"^(?:edite|editar|altere|alterar|corrija|corrigir)\b(?=.*\bdiario\b)(?=.*(?:\b(?:entrada|anotacao)\b|\b\d+\b)).+$"
+                ),
+                0.995,
+                "journal-update",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_SEARCH,
+                re.compile(
+                    r"^(?:(?:procure|buscar|busque|pesquise)\b.*\bdiario\b\s+(?:por|sobre)\s+.+|o que (?:eu )?escrevi (?:no|em) (?:meu )?diario sobre\s+.+|(?:encontre|mostre)\b.*\b(?:entradas|anotacoes)\b.*\bdiario\b\s+sobre\s+.+)$"
+                ),
+                0.995,
+                "journal-search",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_HELP,
+                re.compile(
+                    r"^(?:(?:como (?:eu )?uso|como funciona) (?:o )?(?:meu )?diario|(?:quero escrever|abrir|abra) (?:no )?(?:meu )?diario)$"
+                ),
+                0.99,
+                "journal-help",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_LIST,
+                re.compile(
+                    r"^(?:diario(?: (?:de|do) (?:hoje|ontem|\d{1,2}\s+\d{1,2}(?:\s+\d{2,4})?))?|meu diario(?: (?:de|do) (?:hoje|ontem|\d{1,2}\s+\d{1,2}(?:\s+\d{2,4})?))?|minhas (?:entradas|anotacoes) (?:do|no) diario|(?:mostre|liste|leia|abra|resuma) (?:o )?(?:meu )?diario(?: (?:de|do) (?:hoje|ontem|\d{1,2}\s+\d{1,2}(?:\s+\d{2,4})?))?|o que (?:eu )?escrevi (?:hoje|ontem)?\s*(?:no|em) (?:meu )?diario)$"
+                ),
+                0.99,
+                "journal-list",
+            ),
+            _IntentRule(
+                IntentName.JOURNAL_CREATE,
+                re.compile(
+                    r"^(?:diario\s+(?!de\s+(?:hoje|ontem)$)\S.+|(?:anote|anota|registre|registra|escreva|escreve|salve|guarde)\b.*\b(?:meu )?diario\b\s+\S.+)$"
+                ),
+                0.995,
+                "journal-create",
+            ),
             _IntentRule(
                 IntentName.KNOWLEDGE_RELATION,
                 re.compile(
