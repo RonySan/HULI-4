@@ -23,7 +23,7 @@ O bind local reduz exposição acidental enquanto autenticação e políticas ai
 
 ## Proprietário e senha opcional
 
-A senha do proprietário é opcional na execução local. Se o proprietário escolher uma senha, ela deve ter pelo menos 4 caracteres nesta fase. Se deixar a senha vazia, o nome do proprietário é suficiente para o acesso local.
+A senha do proprietário é opcional na execução local. Se o proprietário escolher uma senha nova, ela deve ter pelo menos 8 caracteres. Senhas curtas criadas em versões anteriores continuam permitindo login para que o proprietário migre os dados e faça a troca com segurança. Se deixar a senha vazia, o nome do proprietário é suficiente para o acesso local, mas o diário permanece bloqueado.
 
 Quando existe senha, ela usa `hashlib.scrypt` com salt aleatório. Mesmo quando a senha é vazia, o banco armazena somente o hash derivado e o salt, nunca a senha original.
 
@@ -43,6 +43,17 @@ A API **não** converte usuário desconhecido em proprietário nem oferece acess
 ## Sessões
 
 O cliente proprietário recebe um token opaco aleatório. O SQLite armazena somente SHA-256 desse token. Sessões possuem expiração e revogação.
+
+## Cofre do diário — Fase 4.2
+
+Um login com senha válida abre a chave do diário apenas na memória do processo.
+O logout bloqueia a chave, e a inatividade volta a bloqueá-la mesmo quando o
+token HTTP ainda não expirou. Nesse caso, o cliente deve autenticar novamente.
+
+O retorno de `POST /v1/auth/login` informa se houve migração de entradas antigas
+e o caminho local do backup criado. O conteúdo do diário nunca aparece nessa
+resposta. A API não possui rota de exportação ou restauração nesta fase; essas
+operações permanecem locais e exigem confirmação pelo terminal.
 
 ## Limites
 

@@ -47,7 +47,11 @@ def test_owner_password_can_be_removed(tmp_path: Path) -> None:
     auth.create_owner("rony", "senha-segura-123")
 
     assert auth.requires_password("rony") is True
-    auth.set_password("rony", "")
+    auth.set_password(
+        "rony",
+        "",
+        current_password="senha-segura-123",
+    )
     assert auth.requires_password("rony") is False
 
     user, token = auth.authenticate("rony")
@@ -60,7 +64,11 @@ def test_changing_password_revokes_existing_sessions(tmp_path: Path) -> None:
     auth.create_owner("rony", "senha-segura-123")
     _user, old_token = auth.authenticate("rony", "senha-segura-123")
 
-    auth.set_password("rony", "nova-senha-456")
+    auth.set_password(
+        "rony",
+        "nova-senha-456",
+        current_password="senha-segura-123",
+    )
 
     with pytest.raises(AuthenticationError):
         auth.validate_token(old_token)
@@ -101,6 +109,26 @@ def test_security_policy_rejects_too_short_non_empty_password() -> None:
 
     with pytest.raises(ValueError, match="opcional"):
         policy.validate_password("123")
+
+
+def test_current_password_policy_rejects_four_character_password() -> None:
+    with pytest.raises(ValueError, match="8 caracteres"):
+        SecurityPolicy().validate_password("1234")
+
+
+def test_legacy_short_password_still_authenticates_for_safe_upgrade(
+    tmp_path: Path,
+) -> None:
+    database = SQLiteDatabase(tmp_path / "huli.db")
+    database.initialize()
+    legacy_auth = AuthService(database, SecurityPolicy(min_password_length=4))
+    legacy_auth.create_owner("rony", "1234")
+    current_auth = AuthService(database, SecurityPolicy())
+
+    user, token = current_auth.authenticate("rony", "1234")
+
+    assert user.username == "rony"
+    assert current_auth.validate_token(token) == user
 
 
 def test_guest_policy_allows_only_basic_foundation_commands() -> None:

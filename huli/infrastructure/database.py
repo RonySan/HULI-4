@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 7
+_SCHEMA_VERSION = 8
 
 
 class SQLiteDatabase:
@@ -65,6 +65,9 @@ class SQLiteDatabase:
             if 7 not in applied:
                 self._migration_007_journal(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (7)")
+            if 8 not in applied:
+                self._migration_008_journal_vault(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (8)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -72,6 +75,19 @@ class SQLiteDatabase:
                 "SELECT COALESCE(MAX(version), 0) AS version FROM schema_migrations"
             ).fetchone()
             return int(row["version"]) if row else 0
+
+    def secure_compact(self) -> None:
+        """Reescreve o SQLite e trunca o WAL após remoção de texto legado."""
+
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(self.path, isolation_level=None)
+        try:
+            connection.execute("PRAGMA secure_delete = ON")
+            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            connection.execute("VACUUM")
+            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            connection.close()
 
     @staticmethod
     def _migration_001_runtime(connection: sqlite3.Connection) -> None:
@@ -315,6 +331,61 @@ class SQLiteDatabase:
 
             CREATE INDEX IF NOT EXISTS idx_journal_owner_search_active
             ON journal_entries(owner, search_text, is_active);
+            """
+        )
+
+    @staticmethod
+    def _migration_008_journal_vault(connection: sqlite3.Connection) -> None:
+        """Adiciona envelopes cifrados sem destruir registros da alpha.11.
+
+        A migração estrutural não possui a senha do proprietário. As linhas
+        legadas permanecem marcadas com ``crypto_version = 0`` e são cifradas
+        atomicamente no primeiro login autenticado, após backup portátil.
+        """
+
+        connection.executescript(
+            """
+            ALTER TABLE journal_entries ADD COLUMN crypto_id TEXT;
+            ALTER TABLE journal_entries ADD COLUMN content_nonce BLOB;
+            ALTER TABLE journal_entries ADD COLUMN content_ciphertext BLOB;
+            ALTER TABLE journal_entries ADD COLUMN search_nonce BLOB;
+            ALTER TABLE journal_entries ADD COLUMN search_ciphertext BLOB;
+            ALTER TABLE journal_entries ADD COLUMN mood_nonce BLOB;
+            ALTER TABLE journal_entries ADD COLUMN mood_ciphertext BLOB;
+            ALTER TABLE journal_entries ADD COLUMN tags_nonce BLOB;
+            ALTER TABLE journal_entries ADD COLUMN tags_ciphertext BLOB;
+            ALTER TABLE journal_entries
+                ADD COLUMN crypto_version INTEGER NOT NULL DEFAULT 0;
+
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_journal_crypto_id
+            ON journal_entries(crypto_id)
+            WHERE crypto_id IS NOT NULL;
+
+            CREATE TABLE IF NOT EXISTS journal_search_tokens (
+                entry_id INTEGER NOT NULL,
+                token_hash TEXT NOT NULL,
+                PRIMARY KEY(entry_id, token_hash),
+                FOREIGN KEY(entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_journal_search_token
+            ON journal_search_tokens(token_hash, entry_id);
+
+            CREATE TABLE IF NOT EXISTS journal_vaults (
+                user_id INTEGER PRIMARY KEY,
+                kdf_salt BLOB NOT NULL,
+                kdf_n INTEGER NOT NULL,
+                kdf_r INTEGER NOT NULL,
+                kdf_p INTEGER NOT NULL,
+                wrapped_nonce BLOB NOT NULL,
+                wrapped_key BLOB NOT NULL,
+                os_protection TEXT NOT NULL,
+                crypto_version INTEGER NOT NULL,
+                legacy_scrub_required INTEGER NOT NULL DEFAULT 0,
+                legacy_scrubbed_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
             """
         )
 

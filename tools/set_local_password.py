@@ -19,6 +19,14 @@ def main() -> int:
         print("Huli: usuário ou senha atual inválidos.")
         return 1
 
+    unlock_result = runtime.journal_vault.last_unlock_result(user.username)
+    if unlock_result and unlock_result.migrated_entries:
+        print(
+            f"Huli: {unlock_result.migrated_entries} entrada(s) antiga(s) foram "
+            "criptografadas."
+        )
+        print(f"Backup de migração: {unlock_result.migration_backup}")
+
     new_password = getpass("Nova senha: ").strip()
     confirmation = getpass("Confirme a nova senha: ").strip()
     if new_password != confirmation:
@@ -31,7 +39,11 @@ def main() -> int:
         return 1
 
     try:
-        runtime.auth.set_password(user.username, new_password)
+        runtime.auth.set_password(
+            user.username,
+            new_password,
+            current_password=current_password,
+        )
     except (AuthenticationError, ValueError) as exc:
         runtime.auth.revoke_token(token)
         print(f"Huli: não foi possível alterar a senha: {exc}")

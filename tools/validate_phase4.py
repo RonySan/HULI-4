@@ -170,11 +170,11 @@ def run_validation() -> None:
             "Personalidade alterou indevidamente uma resposta factual da memória.",
         )
 
-        runtime.auth.create_owner("api-owner", "1234")
+        runtime.auth.create_owner("api-owner", "senha-1234")
         client = TestClient(create_app(runtime))
         login = client.post(
             "/v1/auth/login",
-            json={"username": "api-owner", "password": "1234"},
+            json={"username": "api-owner", "password": "senha-1234"},
         )
         require(login.status_code == 200, "Login HTTP falhou.")
         headers = {"Authorization": f"Bearer {login.json()['access_token']}"}

@@ -24,7 +24,8 @@ def build_test_runtime(tmp_path: Path):
             timezone="America/Sao_Paulo",
         )
     )
-    runtime.auth.create_owner("rony", "1234")
+    runtime.auth.create_owner("rony", "senha-1234")
+    runtime.auth.authenticate("rony", "senha-1234")
     return runtime
 
 
@@ -238,7 +239,7 @@ def test_authenticated_api_uses_the_same_private_journal(tmp_path: Path) -> None
     client = TestClient(create_app(runtime))
     login = client.post(
         "/v1/auth/login",
-        json={"username": "rony", "password": "1234"},
+        json={"username": "rony", "password": "senha-1234"},
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 

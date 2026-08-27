@@ -11,7 +11,7 @@ from huli.journal.parsing import (
     parse_journal_query_date,
     parse_journal_update,
 )
-from huli.security import AuthenticationError, AuthService
+from huli.security import AuthenticationError, AuthService, JournalVaultError
 
 
 class JournalSkill:
@@ -88,7 +88,7 @@ class JournalSkill:
                 return self._trash(request, owner)
             if intent == "journal.restore":
                 return self._restore(request, owner)
-        except (JournalPolicyError, LookupError, ValueError) as exc:
+        except (JournalPolicyError, JournalVaultError, LookupError, ValueError) as exc:
             return self._response(request, str(exc), ok=False)
 
         return self._response(
@@ -180,7 +180,7 @@ class JournalSkill:
     def _help(self, request: KernelRequest) -> KernelResponse:
         return self._response(
             request,
-            "Seu diário é privado. Exemplos:\n"
+            "Seu diário é privado e criptografado. Exemplos:\n"
             "- diário: hoje foi um dia importante\n"
             "- diário: consegui finalizar um projeto | humor: feliz | tags: trabalho\n"
             "- meu diário de hoje\n"

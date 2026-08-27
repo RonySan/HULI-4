@@ -102,11 +102,11 @@ def run_validation() -> None:
             "Horário falhou.",
         )
 
-        runtime.auth.create_owner("api-owner", "1234")
+        runtime.auth.create_owner("api-owner", "senha-1234")
         client = TestClient(create_app(runtime))
         login = client.post(
             "/v1/auth/login",
-            json={"username": "api-owner", "password": "1234"},
+            json={"username": "api-owner", "password": "senha-1234"},
         )
         require(login.status_code == 200, "Login da API falhou.")
 

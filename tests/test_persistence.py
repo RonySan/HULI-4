@@ -16,7 +16,7 @@ def test_database_initializes_schema(tmp_path: Path) -> None:
     database.initialize()
 
     assert database.path.exists()
-    assert database.schema_version() == 7
+    assert database.schema_version() == 8
 
 
 def test_runtime_recorder_persists_interaction(tmp_path: Path) -> None:

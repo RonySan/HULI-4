@@ -11,7 +11,7 @@ from huli.journal import JournalPolicyError
 
 
 def build_test_runtime(tmp_path: Path):
-    return build_runtime(
+    runtime = build_runtime(
         Settings(
             environment="test",
             log_level="CRITICAL",
@@ -19,6 +19,9 @@ def build_test_runtime(tmp_path: Path):
             timezone="America/Sao_Paulo",
         )
     )
+    runtime.auth.create_owner("rony", "senha-1234")
+    runtime.auth.authenticate("rony", "senha-1234")
+    return runtime
 
 
 def test_journal_create_search_update_soft_delete_and_restore(tmp_path: Path) -> None:
@@ -31,7 +34,7 @@ def test_journal_create_search_update_soft_delete_and_restore(tmp_path: Path) ->
         tags=("Trabalho", "Huli", "trabalho"),
     )
 
-    assert runtime.database.schema_version() == 7
+    assert runtime.database.schema_version() == 8
     assert entry.owner == "rony"
     assert entry.entry_date == date(2026, 8, 27)
     assert entry.mood == "feliz"
@@ -70,6 +73,8 @@ def test_journal_is_strictly_isolated_by_owner(tmp_path: Path) -> None:
         owner="rony",
         content="Entrada que pertence somente ao Rony.",
     )
+    runtime.auth.create_owner("outro", "senha-5678")
+    runtime.auth.authenticate("outro", "senha-5678")
     runtime.journal.create(
         owner="outro",
         content="Entrada pertencente a outro usuário.",
@@ -109,12 +114,15 @@ def test_journal_survives_runtime_restart(tmp_path: Path) -> None:
         timezone="America/Sao_Paulo",
     )
     first = build_runtime(settings)
+    first.auth.create_owner("rony", "senha-1234")
+    first.auth.authenticate("rony", "senha-1234")
     first.journal.create(
         owner="rony",
         content="Esta entrada precisa continuar disponível depois de reiniciar.",
     )
 
     second = build_runtime(settings)
+    second.auth.authenticate("rony", "senha-1234")
 
     assert second.journal_repository.count_active("rony") == 1
     assert "continuar disponível" in second.journal.recent(owner="rony")[0].content

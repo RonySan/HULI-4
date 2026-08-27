@@ -2,6 +2,9 @@
 
 Versão de staging: `4.0.0-alpha.11`.
 
+> Documento histórico. A limitação de texto em repouso descrita abaixo foi
+> corrigida pela Fase 4.2 na `4.0.0-alpha.12`.
+
 ## Objetivo
 
 Permitir que o proprietário use a Huli como diário pessoal persistente sem

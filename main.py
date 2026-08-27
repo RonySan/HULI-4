@@ -9,7 +9,7 @@ from uuid import uuid4
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.core import InvalidKernelInput
-from huli.security import AuthenticationError
+from huli.security import AuthenticationError, JournalVaultError
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +42,7 @@ def _first_run_setup(runtime: HuliRuntime) -> CliSession:
         try:
             runtime.auth.create_owner(username, password)
             user, token = runtime.auth.authenticate(username, password)
-        except ValueError as exc:
+        except (ValueError, JournalVaultError) as exc:
             print(f"Huli: {exc}")
             username = input("Usuário proprietário (Enter = visitante): ").strip()
             if not username:
@@ -68,9 +68,17 @@ def _authenticate(runtime: HuliRuntime) -> CliSession:
             password = getpass("Senha: ").strip()
         try:
             user, token = runtime.auth.authenticate(known_user.username, password)
+        except JournalVaultError as exc:
+            print(f"Huli: credenciais válidas, mas o cofre não pôde ser aberto: {exc}")
+            continue
         except (AuthenticationError, ValueError):
             print("Huli: Senha inválida.")
             continue
+        if password and len(password) < runtime.security.min_password_length:
+            print(
+                "Huli: sua senha antiga ainda funciona, mas é curta para proteger o "
+                "cofre. Atualize com: python tools/set_local_password.py"
+            )
         return CliSession(username=user.username, role="owner", token=token)
     print("Huli: Limite de tentativas atingido. Entrando como visitante.")
     return CliSession(username="Visitante", role="guest")
@@ -93,20 +101,27 @@ def _metadata(session: CliSession) -> dict[str, object]:
 
 def run_cli() -> None:
     runtime = build_runtime()
-    print(f"{__app_name__} {__version__} — Fase 4.1 staging: diário pessoal privado.")
+    print(f"{__app_name__} {__version__} — Fase 4.2 staging: cofre pessoal seguro.")
     session = _authenticate(runtime)
     if session.is_guest:
         print(f"Huli: Bem-vindo, {session.username}. Modo visitante com acesso limitado.")
         print("Visitante pode usar conversa básica, horário, ping e status.")
     else:
         print(f"Huli: Bem-vindo, {session.username}.")
+        unlock_result = runtime.journal_vault.last_unlock_result(session.username)
+        if unlock_result and unlock_result.migrated_entries:
+            print(
+                f"Huli: {unlock_result.migrated_entries} entrada(s) antiga(s) foram "
+                "criptografadas com segurança."
+            )
+            print(f"Backup de migração: {unlock_result.migration_backup}")
     print(
         "Recursos atuais: contexto, tarefas, agenda, resumo, projetos, memória, "
         "conhecimento estruturado, personalidade contextual e diário privado."
     )
     if not session.is_guest and runtime.auth.requires_password(session.username):
         print(
-            "Diário: use 'diário: seu texto' ou 'como uso meu diário?' para ver os exemplos."
+            "Cofre aberto: use 'diário: seu texto' ou 'como uso meu diário?' para os exemplos."
         )
     elif not session.is_guest:
         print(

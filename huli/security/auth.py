@@ -7,9 +7,13 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import secrets
+from typing import TYPE_CHECKING
 
 from huli.infrastructure.database import SQLiteDatabase
 from huli.security.policy import SecurityPolicy
+
+if TYPE_CHECKING:
+    from huli.security.journal_vault import JournalVault
 
 
 class AuthenticationError(ValueError):
@@ -28,6 +32,12 @@ class AuthService:
     def __init__(self, database: SQLiteDatabase, policy: SecurityPolicy | None = None) -> None:
         self.database = database
         self.policy = policy or SecurityPolicy()
+        self._journal_vault: JournalVault | None = None
+
+    def bind_journal_vault(self, vault: JournalVault) -> None:
+        """Liga o ciclo de abertura/bloqueio do diário ao login local."""
+
+        self._journal_vault = vault
 
     def has_users(self) -> bool:
         with self.database.connect() as connection:
@@ -96,39 +106,74 @@ class AuthService:
                 raise
             return AuthenticatedUser(id=int(cursor.lastrowid), username=username)
 
-    def set_password(self, username: str, new_password: str = "") -> None:
-        """Altera ou remove a senha local de um usuário ativo."""
-        normalized = self._normalize_username(username)
+    def set_password(
+        self,
+        username: str,
+        new_password: str = "",
+        *,
+        current_password: str | None = None,
+    ) -> None:
+        """Troca a senha e o envelope do cofre em uma única transação."""
+
+        current = str(current_password or "").strip()
+        user = self.verify_credentials(username, current)
+        normalized = user.username
         password = str(new_password or "").strip()
         self.policy.validate_password(password)
         salt = secrets.token_bytes(16)
         password_hash = self._hash_password(password, salt)
 
-        with self.database.connect() as connection:
-            cursor = connection.execute(
-                """
-                UPDATE users
-                SET password_hash = ?, password_salt = ?
-                WHERE username = ? COLLATE NOCASE
-                  AND is_active = 1
-                """,
-                (password_hash.hex(), salt.hex(), normalized),
-            )
-            if cursor.rowcount != 1:
-                raise AuthenticationError("Usuário não encontrado.")
-            connection.execute(
-                """
-                UPDATE sessions
-                SET revoked_at = ?
-                WHERE user_id = (
-                    SELECT id FROM users WHERE username = ? COLLATE NOCASE
+        if self._journal_vault is not None and current:
+            self._journal_vault.unlock(user, current)
+        try:
+            with self.database.connect() as connection:
+                if self._journal_vault is not None:
+                    self._journal_vault.prepare_password_change(
+                        user,
+                        password,
+                        connection=connection,
+                    )
+                cursor = connection.execute(
+                    """
+                    UPDATE users
+                    SET password_hash = ?, password_salt = ?
+                    WHERE username = ? COLLATE NOCASE
+                      AND is_active = 1
+                    """,
+                    (password_hash.hex(), salt.hex(), normalized),
                 )
-                  AND revoked_at IS NULL
-                """,
-                (datetime.now(timezone.utc).isoformat(), normalized),
-            )
+                if cursor.rowcount != 1:
+                    raise AuthenticationError("Usuário não encontrado.")
+                connection.execute(
+                    """
+                    UPDATE sessions
+                    SET revoked_at = ?
+                    WHERE user_id = ? AND revoked_at IS NULL
+                    """,
+                    (datetime.now(timezone.utc).isoformat(), user.id),
+                )
+            if self._journal_vault is not None and password:
+                self._journal_vault.finish_password_change(user, password)
+        finally:
+            if self._journal_vault is not None:
+                self._journal_vault.lock(normalized)
 
     def authenticate(self, username: str, password: str = "") -> tuple[AuthenticatedUser, str]:
+        password = str(password or "").strip()
+        user = self.verify_credentials(username, password)
+        if self._journal_vault is not None:
+            if password:
+                self._journal_vault.unlock(user, password)
+            else:
+                self._journal_vault.lock(user.username)
+
+        token = secrets.token_urlsafe(32)
+        self._store_session(user.id, token)
+        return user, token
+
+    def verify_credentials(self, username: str, password: str = "") -> AuthenticatedUser:
+        """Valida credenciais sem criar uma sessão nem liberar acesso externo."""
+
         username = self._normalize_username(username)
         password = str(password or "").strip()
         with self.database.connect() as connection:
@@ -150,10 +195,7 @@ class AuthService:
         if not hmac.compare_digest(expected, actual):
             raise AuthenticationError("Usuário ou senha inválidos.")
 
-        user = AuthenticatedUser(id=int(row["id"]), username=str(row["username"]))
-        token = secrets.token_urlsafe(32)
-        self._store_session(user.id, token)
-        return user, token
+        return AuthenticatedUser(id=int(row["id"]), username=str(row["username"]))
 
     def validate_token(self, token: str) -> AuthenticatedUser:
         if not token:
@@ -182,11 +224,25 @@ class AuthService:
         if not token:
             return
         token_hash = self._hash_token(token)
+        username: str | None = None
         with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT u.username
+                FROM sessions s
+                JOIN users u ON u.id = s.user_id
+                WHERE s.token_hash = ?
+                """,
+                (token_hash,),
+            ).fetchone()
+            if row is not None:
+                username = str(row["username"])
             connection.execute(
                 "UPDATE sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL",
                 (datetime.now(timezone.utc).isoformat(), token_hash),
             )
+        if username and self._journal_vault is not None:
+            self._journal_vault.lock(username)
 
     def _store_session(self, user_id: int, token: str) -> None:
         created_at = datetime.now(timezone.utc)

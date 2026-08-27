@@ -25,7 +25,12 @@ from huli.infrastructure import (
     configure_logging,
     load_settings,
 )
-from huli.journal import JournalPolicy, JournalRepository, JournalService
+from huli.journal import (
+    JournalBackupService,
+    JournalPolicy,
+    JournalRepository,
+    JournalService,
+)
 from huli.knowledge import (
     KnowledgeRepository,
     KnowledgeService,
@@ -38,7 +43,7 @@ from huli.memory import (
     MemoryRepository,
 )
 from huli.personality import PersonalityEngine
-from huli.security import AuthService, SecurityPolicy
+from huli.security import AuthService, JournalVault, SecurityPolicy
 from huli.skills import (
     AgendaSkill,
     ConversationSkill,
@@ -72,6 +77,8 @@ class HuliRuntime:
     knowledge_repository: KnowledgeRepository
     journal: JournalService
     journal_repository: JournalRepository
+    journal_vault: JournalVault
+    journal_backups: JournalBackupService
     dispatcher: BrainDispatcher
     kernel: Kernel
     logger: logging.Logger
@@ -95,6 +102,11 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         session_hours=resolved_settings.session_hours,
     )
     auth = AuthService(database, security)
+    journal_vault = JournalVault(
+        database,
+        inactivity_minutes=resolved_settings.journal_lock_minutes,
+    )
+    auth.bind_journal_vault(journal_vault)
 
     events = EventBus()
     event_repository = EventRepository(database)
@@ -115,12 +127,17 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     knowledge = KnowledgeService(knowledge_repository, events)
     MemoryKnowledgeSynchronizer(events, memory_repository, knowledge)
 
-    journal_repository = JournalRepository(database)
+    journal_repository = JournalRepository(database, journal_vault)
     journal = JournalService(
         journal_repository,
         JournalPolicy(),
         events,
         resolved_settings.timezone,
+    )
+    journal_backups = JournalBackupService(
+        journal_repository,
+        JournalPolicy(),
+        resolved_settings.backup_dir,
     )
 
     intents = IntentEngine()
@@ -175,6 +192,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         knowledge_repository=knowledge_repository,
         journal=journal,
         journal_repository=journal_repository,
+        journal_vault=journal_vault,
+        journal_backups=journal_backups,
         dispatcher=dispatcher,
         kernel=kernel,
         logger=logger,

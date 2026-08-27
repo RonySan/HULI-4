@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class SecurityPolicy:
-    min_password_length: int = 4
+    min_password_length: int = 8
     max_input_chars: int = 10_000
     session_hours: int = 24 * 7
     guest_commands: frozenset[str] = frozenset({"ping", "status", "status huli", "teste", "teste skill"})

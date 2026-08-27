@@ -47,7 +47,7 @@ python main.py
 Na primeira execução:
 
 1. informar o nome do proprietário;
-2. deixar a senha vazia para usar sem senha **ou** definir uma senha com pelo menos 4 caracteres;
+2. deixar a senha vazia para usar sem senha **ou** definir uma senha com pelo menos 8 caracteres;
 3. entrar como proprietário;
 4. executar `ping`;
 5. encerrar com `sair`.

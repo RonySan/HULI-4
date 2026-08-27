@@ -21,14 +21,14 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.11`
-- **Fase atual:** Fase 4.1 staging — Diário Pessoal Privado
-- **Módulo atual:** registro pessoal persistente, pesquisável e isolado
-- **Branch de desenvolvimento:** `phase-4-journal-staging`
+- **Versão:** `4.0.0-alpha.12`
+- **Fase atual:** Fase 4.2 staging — Cofre Pessoal Seguro
+- **Módulo atual:** diário cifrado, bloqueio automático e backup portátil
+- **Branch de desenvolvimento:** `phase-4-vault-staging`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
-validação local do usuário e do CI.
+validação local do usuário e do CI em Linux e Windows.
 
 ## Fluxo atual
 
@@ -58,9 +58,8 @@ Skill
         ↓
 KernelResponse
         ↓
-EventBus
-        ↓
-SQLite
+EventBus + SQLite
+        └── diário: AES-256-GCM + índice cego
 ```
 
 O cérebro local classifica intenções, mantém contexto curto e executa Skills de
@@ -117,6 +116,16 @@ lixeira do meu diário
 restaure a entrada #1 do diário
 ```
 
+A `alpha.12` protege conteúdo, índice de busca, humor e etiquetas com
+AES-256-GCM. A chave aleatória do diário é cifrada por uma chave derivada da
+senha com scrypt. No Windows, o envelope recebe uma segunda camada DPAPI ligada
+à conta atual. A busca usa hashes autenticados, sem gravar as palavras no banco.
+
+Na primeira autenticação, entradas da alpha.11 são copiadas para um backup
+criptografado, migradas em uma transação e removidas das páginas lógicas antigas
+do SQLite. A chave aberta permanece apenas em memória e é bloqueada após 15
+minutos sem uso, no logout ou no encerramento do terminal.
+
 ## Instalação de desenvolvimento
 
 Requer Python 3.11.
@@ -132,7 +141,7 @@ python -m pip install -e ".[dev]"
 ```powershell
 python -m ruff check .
 python -m pytest
-powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE4_1.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE4_2.ps1
 ```
 
 O CI executa em Linux e Windows nas branches `phase-*` e em `main`.
@@ -150,6 +159,22 @@ bloqueado até que uma senha seja configurada:
 ```powershell
 python tools/set_local_password.py
 ```
+
+Senhas novas precisam ter pelo menos 8 caracteres. Senhas curtas criadas em
+versões anteriores continuam aceitas apenas para permitir login, migração e
+troca segura; a Huli recomendará a atualização.
+
+Backup e restauração do diário:
+
+```powershell
+python tools/backup_journal.py
+python tools/restore_journal.py
+```
+
+O backup `.hulibak` é portátil e criptografado pela senha usada no momento da
+criação. Depois de trocar a senha da Huli, backups antigos continuam exigindo a
+senha antiga. Sem a senha correta e sem um backup utilizável, o conteúdo não
+pode ser recuperado — essa é uma propriedade da criptografia, não um defeito.
 
 ## Executar API local
 
@@ -173,9 +198,10 @@ A API ainda não deve ser exposta diretamente à internet.
 - [`docs/PHASE_2_PLAN.md`](docs/PHASE_2_PLAN.md)
 - [`docs/PHASE_3_STAGING.md`](docs/PHASE_3_STAGING.md)
 - [`docs/PHASE_4_STAGING.md`](docs/PHASE_4_STAGING.md)
-- [`docs/PHASE_4_VALIDATION.md`](docs/PHASE_4_VALIDATION.md)
 - [`docs/PHASE_4_1_JOURNAL.md`](docs/PHASE_4_1_JOURNAL.md)
 - [`docs/PHASE_4_1_VALIDATION.md`](docs/PHASE_4_1_VALIDATION.md)
+- [`docs/PHASE_4_2_VAULT.md`](docs/PHASE_4_2_VAULT.md)
+- [`docs/PHASE_4_2_VALIDATION.md`](docs/PHASE_4_2_VALIDATION.md)
 - [`docs/INTENT_ENGINE.md`](docs/INTENT_ENGINE.md)
 - [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)
@@ -214,11 +240,16 @@ HULI-4/
 
 Dados sensíveis, tokens, bancos locais, arquivos `.env`, chaves e credenciais nunca devem ser versionados.
 
-O diário exige proprietário autenticado e uma conta com senha, isola registros por usuário, recusa
-senhas/tokens/chaves, não copia entradas para memória ou conhecimento e remove
-o conteúdo dos eventos, interações técnicas e contexto conversacional. Nesta
-alpha, o banco SQLite ainda não possui criptografia própria em repouso. Proteja
-a conta do Windows e use BitLocker; nunca registre credenciais no diário.
+O diário exige proprietário autenticado e uma conta com senha, isola registros
+por usuário, recusa senhas/tokens/chaves, não copia entradas para memória ou
+conhecimento e remove o conteúdo dos eventos, interações técnicas e contexto
+conversacional. O conteúdo, humor, etiquetas e dados de busca ficam cifrados em
+repouso. Metadados operacionais — proprietário, data, sensibilidade, estado e
+horários — continuam visíveis no SQLite.
+
+Criptografia não substitui a proteção do computador. Mantenha a conta do
+Windows protegida, o BitLocker ativo, backups fora do computador e nunca
+registre credenciais no diário.
 
 ## Regra arquitetural
 

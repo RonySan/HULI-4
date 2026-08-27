@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from huli.api import create_app
 from huli.bootstrap import build_runtime
 from huli.infrastructure import Settings
+from huli.security import AuthService, SecurityPolicy
 
 
 def build_client(tmp_path: Path) -> tuple[TestClient, object]:
@@ -23,7 +24,7 @@ def test_health_is_public(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["schema_version"] == 7
+    assert response.json()["schema_version"] == 8
 
 
 def test_messages_require_authentication(tmp_path: Path) -> None:
@@ -48,6 +49,24 @@ def test_passwordless_owner_can_login_with_empty_password(tmp_path: Path) -> Non
     me = client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
     assert me.json()["username"] == "rony"
+
+
+def test_legacy_short_password_login_recommends_upgrade(tmp_path: Path) -> None:
+    client, runtime = build_client(tmp_path)
+    legacy_auth = AuthService(
+        runtime.database,
+        SecurityPolicy(min_password_length=4),
+    )
+    legacy_auth.create_owner("rony", "1234")
+
+    login = client.post(
+        "/v1/auth/login",
+        json={"username": "rony", "password": "1234"},
+    )
+
+    assert login.status_code == 200
+    assert login.json()["password_upgrade_recommended"] is True
+    assert login.json()["journal_vault"]["os_protection"]
 
 
 def test_full_authenticated_flow_and_persistence(tmp_path: Path) -> None:

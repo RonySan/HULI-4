@@ -32,7 +32,8 @@ def run_validation() -> None:
             timezone="America/Sao_Paulo",
         )
         runtime = build_runtime(settings)
-        runtime.auth.create_owner("rony", "1234")
+        runtime.auth.create_owner("rony", "senha-1234")
+        runtime.auth.authenticate("rony", "senha-1234")
         meta = {"session_id": "journal", "username": "rony", "role": "owner"}
 
         require(runtime.database.schema_version() >= 7, "Schema do diário não está ativo.")
@@ -117,16 +118,17 @@ def run_validation() -> None:
         )
 
         restarted = build_runtime(settings)
+        restarted.auth.authenticate("rony", "senha-1234")
         require(
             restarted.journal_repository.count_active("rony") == 1,
             "Diário não sobreviveu ao reinício.",
         )
 
-        restarted.auth.create_owner("api-owner", "1234")
+        restarted.auth.create_owner("api-owner", "senha-5678")
         client = TestClient(create_app(restarted))
         login = client.post(
             "/v1/auth/login",
-            json={"username": "api-owner", "password": "1234"},
+            json={"username": "api-owner", "password": "senha-5678"},
         )
         headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
         api_saved = client.post(

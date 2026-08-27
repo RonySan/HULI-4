@@ -61,3 +61,6 @@ jobs:
 
       - name: Phase 4.1 Private journal validation
         run: python tools/validate_phase4_journal.py
+
+      - name: Phase 4.2 Secure vault validation
+        run: python tools/validate_phase4_vault.py

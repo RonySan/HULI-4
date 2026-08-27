@@ -46,11 +46,11 @@ def test_api_uses_same_knowledge_graph(tmp_path: Path) -> None:
     runtime = build_runtime(
         Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path)
     )
-    runtime.auth.create_owner("rony", "1234")
+    runtime.auth.create_owner("rony", "senha-1234")
     client = TestClient(create_app(runtime))
     login = client.post(
         "/v1/auth/login",
-        json={"username": "rony", "password": "1234"},
+        json={"username": "rony", "password": "senha-1234"},
     )
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 

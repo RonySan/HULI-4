@@ -103,12 +103,12 @@ def test_memory_candidate_event_applies_policy(tmp_path: Path) -> None:
 
 def test_api_uses_the_same_persistent_memory_engine(tmp_path: Path) -> None:
     runtime = build_test_runtime(tmp_path)
-    runtime.auth.create_owner("rony", "1234")
+    runtime.auth.create_owner("rony", "senha-1234")
     client = TestClient(create_app(runtime))
 
     login = client.post(
         "/v1/auth/login",
-        json={"username": "rony", "password": "1234"},
+        json={"username": "rony", "password": "senha-1234"},
     )
     assert login.status_code == 200
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}

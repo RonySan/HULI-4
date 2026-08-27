@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.core import InvalidKernelInput
-from huli.security import AuthenticatedUser, AuthenticationError
+from huli.security import AuthenticatedUser, AuthenticationError, JournalVaultError
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -65,9 +65,12 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
     def login(payload: LoginRequest) -> dict[str, object]:
         try:
             user, token = resolved_runtime.auth.authenticate(payload.username, payload.password)
+        except JournalVaultError as exc:
+            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
         except (AuthenticationError, ValueError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário ou senha inválidos.") from exc
-        return {"token_type": "bearer", "access_token": token, "user": {"id": user.id, "username": user.username}}
+        unlock_result = resolved_runtime.journal_vault.last_unlock_result(user.username)
+        return {"token_type": "bearer", "access_token": token, "user": {"id": user.id, "username": user.username}, "password_upgrade_recommended": bool(payload.password) and len(payload.password) < resolved_runtime.security.min_password_length, "journal_vault": {"migrated_entries": unlock_result.migrated_entries if unlock_result else 0, "migration_backup": str(unlock_result.migration_backup) if unlock_result and unlock_result.migration_backup else None, "os_protection": unlock_result.os_protection if unlock_result else None}}
 
     @app.get("/v1/me")
     def me(user: AuthenticatedUser = Depends(current_user)) -> dict[str, object]:

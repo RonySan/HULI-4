@@ -5,7 +5,7 @@ from __future__ import annotations
 from getpass import getpass
 
 from huli.bootstrap import build_runtime
-from huli.security import AuthenticationError
+from huli.security import AuthenticationError, JournalVaultError
 
 
 def main() -> int:
@@ -16,8 +16,12 @@ def main() -> int:
     try:
         user, token = runtime.auth.authenticate(username, current_password)
         runtime.auth.revoke_token(token)
-        runtime.auth.set_password(user.username, "")
-    except (AuthenticationError, ValueError) as exc:
+        runtime.auth.set_password(
+            user.username,
+            "",
+            current_password=current_password,
+        )
+    except (AuthenticationError, JournalVaultError, ValueError) as exc:
         print(f"Huli: não foi possível remover a senha: {exc}")
         return 1
 

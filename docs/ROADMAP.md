@@ -156,6 +156,24 @@ A criptografia em repouso depende de um cofre de chaves adequado e permanece
 planejada como endurecimento posterior. A alpha atual não simula criptografia
 guardando uma chave ao lado do banco.
 
+### Fase 4.2 — Cofre pessoal seguro
+
+Endurecimento concluído na `4.0.0-alpha.12`:
+
+- AES-256-GCM para conteúdo, busca, humor e etiquetas;
+- chave mestra aleatória envolvida por scrypt e senha do proprietário;
+- segunda camada DPAPI na conta atual do Windows;
+- índice cego HMAC para pesquisa sem palavras legíveis no SQLite;
+- migração transacional da alpha.11 com backup criptografado anterior;
+- limpeza lógica de páginas legadas e truncamento do WAL;
+- bloqueio da chave em memória por inatividade, logout e encerramento;
+- troca de senha com reenvelopamento da chave e revogação de sessões;
+- backup portátil `.hulibak`, restauração autenticada e cópia de segurança
+  automática antes de substituir o diário atual.
+
+Metadados necessários para operação continuam visíveis. A Fase 4.2 não adiciona
+inferência emocional, diagnóstico ou aprendizagem automática a partir do diário.
+
 ---
 
 ## Fase 5 — Inteligência híbrida
@@ -392,9 +410,10 @@ Huli 4.0
 │   └── regressões automatizadas preservadas
 └── Fase 4 staging
     ├── personalidade, conversa e linguagem natural — 4.0.0-alpha.10
-    └── diário pessoal privado — 4.0.0-alpha.11
+    ├── diário pessoal privado — 4.0.0-alpha.11
+    └── cofre pessoal seguro — 4.0.0-alpha.12
 ```
 
 A primeira HULI permanece como referência histórica. A nova Huli reaproveita
 conhecimento e decisões válidas, mas não herda a arquitetura antiga por cópia.
-A Fase 5 não começa antes da validação e estabilização formal da Fase 4.1.
+A Fase 5 não começa antes da validação local e estabilização formal da Fase 4.2.

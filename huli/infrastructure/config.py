@@ -22,10 +22,15 @@ class Settings:
     max_input_chars: int = 10_000
     timezone: str = "America/Sao_Paulo"
     context_turns: int = 20
+    journal_lock_minutes: int = 15
 
     @property
     def database_path(self) -> Path:
         return self.data_dir / "huli.db"
+
+    @property
+    def backup_dir(self) -> Path:
+        return self.data_dir / "backups"
 
 
 def load_settings(source: Mapping[str, str] | None = None) -> Settings:
@@ -45,7 +50,14 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
     except ZoneInfoNotFoundError as exc:
         raise ValueError(f"HULI_TIMEZONE inválido: {timezone_name}.") from exc
     context_turns = _read_int(values, "HULI_CONTEXT_TURNS", 20, minimum=1, maximum=200)
-    return Settings(environment=environment, log_level=log_level, data_dir=Path(raw_data_dir).expanduser(), api_host=api_host, api_port=api_port, session_hours=session_hours, max_input_chars=max_input_chars, timezone=timezone_name, context_turns=context_turns)
+    journal_lock_minutes = _read_int(
+        values,
+        "HULI_JOURNAL_LOCK_MINUTES",
+        15,
+        minimum=1,
+        maximum=24 * 60,
+    )
+    return Settings(environment=environment, log_level=log_level, data_dir=Path(raw_data_dir).expanduser(), api_host=api_host, api_port=api_port, session_hours=session_hours, max_input_chars=max_input_chars, timezone=timezone_name, context_turns=context_turns, journal_lock_minutes=journal_lock_minutes)
 
 
 def _read_int(values: Mapping[str, str], key: str, default: int, *, minimum: int, maximum: int) -> int:
