@@ -2,6 +2,7 @@
 
 from huli.skills.agenda_skill import AgendaSkill
 from huli.skills.base import Skill
+from huli.skills.conversation_mode import ConversationModeSkill
 from huli.skills.daily_summary_skill import DailySummarySkill
 from huli.skills.foundation import FoundationSkill
 from huli.skills.knowledge_skill import KnowledgeSkill
@@ -14,6 +15,7 @@ from huli.skills.time_skill import TimeSkill
 
 __all__ = [
     "AgendaSkill",
+    "ConversationModeSkill",
     "DailySummarySkill",
     "DuplicateSkillError",
     "FoundationSkill",
