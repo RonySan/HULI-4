@@ -52,3 +52,6 @@ jobs:
 
       - name: Phase 2 Memory Engine validation
         run: python tools/validate_phase2.py
+
+      - name: Phase 3 Knowledge Graph staging validation
+        run: python tools/validate_phase3_staging.py

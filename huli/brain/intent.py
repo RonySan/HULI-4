@@ -27,6 +27,8 @@ class IntentName(StrEnum):
     MEMORY_RECALL = "memory.recall"
     MEMORY_LIST = "memory.list"
     MEMORY_FORGET = "memory.forget"
+    KNOWLEDGE_DESCRIBE = "knowledge.describe"
+    KNOWLEDGE_RELATION = "knowledge.relation"
     UNKNOWN = "unknown"
 
 
@@ -49,6 +51,22 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.KNOWLEDGE_RELATION,
+                re.compile(
+                    r"^(?:quem (?:desenvolve|desenvolveu) .+|onde .+ (?:esta|fica) hospedado|qual servidor hospeda .+|do que .+ depende|(?:a que|a quem) .+ pertence|de quem .+ (?:e|eh) cliente)$"
+                ),
+                0.995,
+                "knowledge-relation",
+            ),
+            _IntentRule(
+                IntentName.KNOWLEDGE_DESCRIBE,
+                re.compile(
+                    r"^(?:o que voce sabe (?:sobre|de)|fale (?:sobre|do|da)|informacoes (?:sobre|de))\s+.+$"
+                ),
+                0.99,
+                "knowledge-describe",
+            ),
             _IntentRule(
                 IntentName.MEMORY_FORGET,
                 re.compile(
