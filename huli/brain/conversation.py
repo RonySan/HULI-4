@@ -66,7 +66,7 @@ class ConversationEngine:
     _POSITIVE_PATTERN = re.compile(r"\b(?:bom|legal|bacana|top|show|gostei|adorei)\b")
     _PROFESSIONAL_PATTERN = re.compile(
         r"\b(?:cliente|relatorio|orcamento|projeto|tarefa|agenda|compromisso|servidor|"
-        r"sistema|banco de dados|deploy|producao|empresa|os|ordem de servico)\b"
+        r"sistema|banco de dados|deploy|producao|empresa|ordem de servico)\b"
     )
 
     def __init__(self) -> None:
@@ -153,7 +153,9 @@ class ConversationEngine:
         try:
             return aliases[normalized]
         except KeyError as exc:
-            raise ValueError("Modo inválido. Use automático, casual, profissional, sério ou risco.") from exc
+            raise ValueError(
+                "Modo inválido. Use automático, casual, profissional, sério ou risco."
+            ) from exc
 
     def _resolve_mode(
         self,
