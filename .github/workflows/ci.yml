@@ -64,3 +64,6 @@ jobs:
 
       - name: Phase 4.2 Secure vault validation
         run: python tools/validate_phase4_vault.py
+
+      - name: Voice foundation and natural agenda validation
+        run: python tools/validate_voice.py

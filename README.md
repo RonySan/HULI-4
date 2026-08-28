@@ -21,14 +21,16 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.12`
-- **Fase atual:** Fase 4.2 staging — Cofre Pessoal Seguro
-- **Módulo atual:** diário cifrado, bloqueio automático e backup portátil
-- **Branch de desenvolvimento:** `phase-4-vault-staging`
+- **Versão:** `4.0.0-alpha.13`
+- **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
+- **Módulo atual:** síntese, microfone, modo contínuo e proteção do diário falado
+- **Branch de desenvolvimento:** `phase-9-voice-staging`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
 validação local do usuário e do CI em Linux e Windows.
+As Fases 5–8 não foram declaradas concluídas: apenas a interface local de voz foi
+antecipada por decisão do proprietário, sem acoplar voz ao Kernel.
 
 ## Fluxo atual
 
@@ -60,6 +62,10 @@ KernelResponse
         ↓
 EventBus + SQLite
         └── diário: AES-256-GCM + índice cego
+
+Interface local (Windows)
+  ├── microfone → System.Speech → Kernel
+  └── KernelResponse → System.Speech → alto-falante
 ```
 
 O cérebro local classifica intenções, mantém contexto curto e executa Skills de
@@ -102,6 +108,9 @@ A `alpha.10` entende variações naturais verificadas no uso real, como
 “que dia é hoje?”, “como está nossa agenda essa noite?”, “agenda pra mim jantar
 às 22 horas” e “o que conversamos mais cedo?”.
 
+A `alpha.13` também entende `agendas` e `o que temos na agenda`, corrigindo as
+duas frases que falharam na validação local.
+
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
 
@@ -126,6 +135,32 @@ criptografado, migradas em uma transação e removidas das páginas lógicas ant
 do SQLite. A chave aberta permanece apenas em memória e é bloqueada após 15
 minutos sem uso, no logout ou no encerramento do terminal.
 
+## Voz local — alpha.13
+
+A primeira fundação de voz usa `System.Speech`, já presente no Windows, e não
+envia áudio nem transcrições a serviços externos. Ela funciona depois do login e
+não ignora as permissões do proprietário/visitante.
+
+Comandos disponíveis no terminal:
+
+```text
+voz                 mostra o estado da voz
+ativar voz          fala automaticamente as respostas permitidas
+desativar voz       desliga fala e modo contínuo
+ouvir               escuta um único comando pelo microfone
+modo voz            mantém a conversa por voz
+parar voz           retorna ao teclado
+```
+
+O modo contínuo volta ao teclado após o tempo de inatividade. Respostas do
+diário privado nunca são lidas automaticamente em voz alta. Palavra de ativação,
+interrupção durante a fala e identificação biométrica de quem falou continuam
+planejadas para evoluções posteriores da Fase 9.
+
+Para o reconhecimento em português, o Windows precisa ter o pacote de fala
+`Português (Brasil)` instalado em **Configurações > Hora e idioma > Idioma e
+região > Português (Brasil) > Opções de idioma > Fala**.
+
 ## Instalação de desenvolvimento
 
 Requer Python 3.11.
@@ -142,6 +177,7 @@ python -m pip install -e ".[dev]"
 python -m ruff check .
 python -m pytest
 powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_FASE4_2.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\VALIDAR_VOZ.ps1
 ```
 
 O CI executa em Linux e Windows nas branches `phase-*` e em `main`.
@@ -202,6 +238,7 @@ A API ainda não deve ser exposta diretamente à internet.
 - [`docs/PHASE_4_1_VALIDATION.md`](docs/PHASE_4_1_VALIDATION.md)
 - [`docs/PHASE_4_2_VAULT.md`](docs/PHASE_4_2_VAULT.md)
 - [`docs/PHASE_4_2_VALIDATION.md`](docs/PHASE_4_2_VALIDATION.md)
+- [`docs/PHASE_9_VOICE_FOUNDATION.md`](docs/PHASE_9_VOICE_FOUNDATION.md)
 - [`docs/INTENT_ENGINE.md`](docs/INTENT_ENGINE.md)
 - [`docs/FOUNDATION_RUNTIME.md`](docs/FOUNDATION_RUNTIME.md)
 - [`docs/API_SECURITY.md`](docs/API_SECURITY.md)

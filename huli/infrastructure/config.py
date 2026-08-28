@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 import os
+import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 _VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
@@ -23,6 +24,11 @@ class Settings:
     timezone: str = "America/Sao_Paulo"
     context_turns: int = 20
     journal_lock_minutes: int = 15
+    voice_auto_speak: bool = False
+    voice_input_timeout: int = 8
+    voice_language: str = "pt-BR"
+    voice_rate: int = 0
+    voice_volume: int = 100
 
     @property
     def database_path(self) -> Path:
@@ -57,7 +63,36 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         minimum=1,
         maximum=24 * 60,
     )
-    return Settings(environment=environment, log_level=log_level, data_dir=Path(raw_data_dir).expanduser(), api_host=api_host, api_port=api_port, session_hours=session_hours, max_input_chars=max_input_chars, timezone=timezone_name, context_turns=context_turns, journal_lock_minutes=journal_lock_minutes)
+    voice_auto_speak = _read_bool(values, "HULI_VOICE_AUTO_SPEAK", False)
+    voice_input_timeout = _read_int(
+        values,
+        "HULI_VOICE_INPUT_TIMEOUT",
+        8,
+        minimum=2,
+        maximum=60,
+    )
+    voice_language = values.get("HULI_VOICE_LANGUAGE", "pt-BR").strip() or "pt-BR"
+    if not re.fullmatch(r"[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?", voice_language):
+        raise ValueError("HULI_VOICE_LANGUAGE deve usar um código como pt-BR.")
+    voice_rate = _read_int(values, "HULI_VOICE_RATE", 0, minimum=-10, maximum=10)
+    voice_volume = _read_int(values, "HULI_VOICE_VOLUME", 100, minimum=0, maximum=100)
+    return Settings(
+        environment=environment,
+        log_level=log_level,
+        data_dir=Path(raw_data_dir).expanduser(),
+        api_host=api_host,
+        api_port=api_port,
+        session_hours=session_hours,
+        max_input_chars=max_input_chars,
+        timezone=timezone_name,
+        context_turns=context_turns,
+        journal_lock_minutes=journal_lock_minutes,
+        voice_auto_speak=voice_auto_speak,
+        voice_input_timeout=voice_input_timeout,
+        voice_language=voice_language,
+        voice_rate=voice_rate,
+        voice_volume=voice_volume,
+    )
 
 
 def _read_int(values: Mapping[str, str], key: str, default: int, *, minimum: int, maximum: int) -> int:
@@ -71,3 +106,15 @@ def _read_int(values: Mapping[str, str], key: str, default: int, *, minimum: int
     if value < minimum or value > maximum:
         raise ValueError(f"{key} precisa estar entre {minimum} e {maximum}.")
     return value
+
+
+def _read_bool(values: Mapping[str, str], key: str, default: bool) -> bool:
+    raw = values.get(key)
+    if raw is None or not raw.strip():
+        return default
+    normalized = raw.strip().casefold()
+    if normalized in {"1", "true", "sim", "yes", "on", "ligado"}:
+        return True
+    if normalized in {"0", "false", "nao", "não", "no", "off", "desligado"}:
+        return False
+    raise ValueError(f"{key} precisa ser true/false ou sim/não.")

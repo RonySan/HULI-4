@@ -56,6 +56,7 @@ class AgendaSkill:
                 heading = "Compromissos desta noite:"
             elif "hoje" in normalized or normalized in {
                 "agenda",
+                "agendas",
                 "minha agenda",
                 "nossa agenda",
             }:

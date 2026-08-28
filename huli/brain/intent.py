@@ -249,7 +249,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_QUERY,
                 re.compile(
-                    r"^(?:agenda|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:de )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:hoje|amanha)\b"
+                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:de )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:hoje|amanha)\b"
                 ),
                 0.96,
                 "agenda-query",

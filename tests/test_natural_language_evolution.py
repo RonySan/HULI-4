@@ -38,6 +38,8 @@ def owner_metadata(session_id: str = "natural-language") -> dict[str, str]:
         ("como está a agenda pra hoje?", IntentName.AGENDA_QUERY),
         ("como está nossa agenda essa noite?", IntentName.AGENDA_QUERY),
         ("agenda", IntentName.AGENDA_QUERY),
+        ("agendas", IntentName.AGENDA_QUERY),
+        ("o que temos na agenda", IntentName.AGENDA_QUERY),
         ("temos compromissos hoje à noite?", IntentName.AGENDA_QUERY),
         (
             "agenda pra mim jantar às 22 horas com a Gisele",

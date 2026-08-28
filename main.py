@@ -10,6 +10,14 @@ from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticationError, JournalVaultError
+from huli.voice import (
+    VoiceCommand,
+    VoiceError,
+    VoiceService,
+    VoiceSession,
+    VoiceTimeoutError,
+    parse_voice_command,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,9 +107,71 @@ def _metadata(session: CliSession) -> dict[str, object]:
     }
 
 
+def _build_voice_session(runtime: HuliRuntime) -> VoiceSession:
+    settings = runtime.settings
+    service = VoiceService.local_default(
+        language=settings.voice_language,
+        input_timeout=settings.voice_input_timeout,
+        rate=settings.voice_rate,
+        volume=settings.voice_volume,
+    )
+    return VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
+
+
+def _listen(voice: VoiceSession) -> str | None:
+    print("Huli: Estou ouvindo...")
+    try:
+        text = voice.service.listen_once()
+    except VoiceTimeoutError as exc:
+        print(f"Huli: {exc}")
+        voice.continuous = False
+        return None
+    except VoiceError as exc:
+        print(f"Huli: Voz indisponível: {exc}")
+        voice.continuous = False
+        return None
+    print(f"Você (voz): {text}")
+    return text
+
+
+def _handle_voice_command(command: VoiceCommand, voice: VoiceSession) -> bool:
+    if command is VoiceCommand.NONE:
+        return False
+    if command is VoiceCommand.STATUS:
+        print(f"Huli: {voice.status_text()}")
+    elif command is VoiceCommand.ENABLE:
+        if not voice.service.capabilities().output_available:
+            print(f"Huli: {voice.status_text()}")
+        else:
+            voice.auto_speak = True
+            print("Huli: Respostas por voz ativadas.")
+            try:
+                voice.service.speak("Respostas por voz ativadas.")
+            except VoiceError as exc:
+                voice.auto_speak = False
+                print(f"Huli: Não consegui ativar a fala: {exc}")
+    elif command is VoiceCommand.DISABLE:
+        voice.auto_speak = False
+        voice.continuous = False
+        print("Huli: Respostas por voz desativadas.")
+    elif command is VoiceCommand.CONTINUOUS:
+        capabilities = voice.service.capabilities()
+        if not capabilities.input_available:
+            print(f"Huli: Voz indisponível. {capabilities.detail}")
+        else:
+            voice.auto_speak = True
+            voice.continuous = True
+            print("Huli: Modo de voz iniciado. Diga 'parar voz' para voltar ao teclado.")
+    elif command is VoiceCommand.STOP:
+        voice.continuous = False
+        print("Huli: Modo contínuo encerrado. O teclado continua disponível.")
+    return True
+
+
 def run_cli() -> None:
     runtime = build_runtime()
-    print(f"{__app_name__} {__version__} — Fase 4.2 staging: cofre pessoal seguro.")
+    voice = _build_voice_session(runtime)
+    print(f"{__app_name__} {__version__} — Voz local para Windows.")
     session = _authenticate(runtime)
     if session.is_guest:
         print(f"Huli: Bem-vindo, {session.username}. Modo visitante com acesso limitado.")
@@ -117,7 +187,7 @@ def run_cli() -> None:
             print(f"Backup de migração: {unlock_result.migration_backup}")
     print(
         "Recursos atuais: contexto, tarefas, agenda, resumo, projetos, memória, "
-        "conhecimento estruturado, personalidade contextual e diário privado."
+        "conhecimento estruturado, personalidade contextual, diário privado e voz."
     )
     if not session.is_guest and runtime.auth.requires_password(session.username):
         print(
@@ -128,17 +198,33 @@ def run_cli() -> None:
             "Diário bloqueado: configure uma senha com "
             "'python tools/set_local_password.py'."
         )
-    print("Digite 'sair' para encerrar.")
+    print(
+        "Voz: use 'voz', 'ativar voz', 'ouvir' ou 'modo voz'. "
+        "Digite 'sair' para encerrar."
+    )
     try:
         while True:
-            try:
-                text = input("Você: ")
-            except (EOFError, KeyboardInterrupt):
-                print("\nHuli: Encerrando interface local.")
-                break
+            if voice.continuous:
+                text = _listen(voice)
+                if text is None:
+                    continue
+            else:
+                try:
+                    text = input("Você: ")
+                except (EOFError, KeyboardInterrupt):
+                    print("\nHuli: Encerrando interface local.")
+                    break
             if text.strip().lower() in {"sair", "exit", "quit"}:
                 print("Huli: Encerrando interface local.")
                 break
+            voice_command = parse_voice_command(text)
+            if voice_command is VoiceCommand.LISTEN:
+                text = _listen(voice)
+                if text is None:
+                    continue
+                voice_command = parse_voice_command(text)
+            if _handle_voice_command(voice_command, voice):
+                continue
             if not _can_execute(runtime, session, text):
                 print("Huli: Essa ação exige acesso do proprietário. Você está como visitante.")
                 continue
@@ -149,6 +235,14 @@ def run_cli() -> None:
                 print(f"Huli: {exc}")
                 continue
             print(f"Huli: {response.text}")
+            intent = runtime.intents.classify(text).intent.value
+            if voice.can_speak_response(intent):
+                try:
+                    voice.service.speak(response.text)
+                except VoiceError as exc:
+                    voice.auto_speak = False
+                    voice.continuous = False
+                    print(f"Huli: A fala foi desativada após uma falha: {exc}")
     finally:
         runtime.context.clear(session.session_id)
         if session.token:

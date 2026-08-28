@@ -258,6 +258,22 @@ Ações perigosas exigem confirmação.
 
 ## Fase 9 — Voz
 
+### Fundação antecipada — `4.0.0-alpha.13`
+
+Por decisão do proprietário, a interface local mínima foi antecipada sem marcar
+as Fases 5–8 como concluídas e sem mover responsabilidades para o Kernel:
+
+- síntese local pelo `System.Speech` do Windows;
+- reconhecimento local de um comando pelo microfone;
+- modo de conversa contínua com saída por inatividade;
+- comandos de voz tratados pela interface local depois da autenticação;
+- respostas do diário privado bloqueadas na fala automática;
+- configuração de idioma, velocidade, volume e tempo de escuta;
+- testes com backend substituível, sem exigir áudio no CI.
+
+A fundação não inclui palavra de ativação, biometria de voz nem XTTS. Esses itens
+continuam no escopo completo da Fase 9.
+
 Fluxo previsto:
 
 ```text
@@ -408,12 +424,15 @@ Durante construção:
 Huli 4.0
 ├── Fases 0–3
 │   └── regressões automatizadas preservadas
-└── Fase 4 staging
+├── Fase 4 staging
     ├── personalidade, conversa e linguagem natural — 4.0.0-alpha.10
     ├── diário pessoal privado — 4.0.0-alpha.11
     └── cofre pessoal seguro — 4.0.0-alpha.12
+└── Fundação antecipada da Fase 9
+    └── voz local do Windows e agenda natural — 4.0.0-alpha.13
 ```
 
 A primeira HULI permanece como referência histórica. A nova Huli reaproveita
 conhecimento e decisões válidas, mas não herda a arquitetura antiga por cópia.
-A Fase 5 não começa antes da validação local e estabilização formal da Fase 4.2.
+A fundação de voz antecipada não altera a ordem restante: a Fase 5 continua sendo
+a próxima fase estrutural depois da estabilização formal da Fase 4.2.
