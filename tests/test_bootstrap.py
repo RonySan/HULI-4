@@ -7,7 +7,7 @@ from huli.core import Event
 from huli.infrastructure import Settings
 
 
-def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> None:
+def test_build_runtime_connects_phase4_components(tmp_path: Path) -> None:
     runtime = build_runtime(
         Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path)
     )
@@ -18,6 +18,7 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "agenda",
         "daily-summary",
         "smalltalk",
+        "conversation-mode",
         "project-context",
         "memory",
         "knowledge",
@@ -27,7 +28,9 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
     assert runtime.knowledge_repository.list_entities("rony") == ()
 
     classified: list[Event] = []
+    conversation_events: list[Event] = []
     runtime.events.subscribe("brain.intent.classified", classified.append)
+    runtime.events.subscribe("brain.conversation.updated", conversation_events.append)
 
     response = runtime.kernel.process(
         "status huli",
@@ -60,8 +63,14 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
     assert knowledge_response.handled_by == "knowledge"
     assert "MySQL" in knowledge_response.text
 
-    assert len(classified) == 4
+    mode_response = runtime.kernel.process("modo profissional", metadata=owner_meta)
+    assert mode_response.handled_by == "conversation-mode"
+    assert runtime.conversation.snapshot("bootstrap-test").mode.value == "professional"
+
+    assert len(classified) == 5
     assert classified[0].payload["intent"] == "system.status"
     assert classified[1].payload["intent"] == "time.query"
     assert classified[2].payload["intent"] == "memory.remember"
     assert classified[3].payload["intent"] == "knowledge.relation"
+    assert classified[4].payload["intent"] == "conversation.mode.set"
+    assert len(conversation_events) == 5
