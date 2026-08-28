@@ -9,6 +9,7 @@ from huli.brain import (
     AgendaService,
     BrainDispatcher,
     ContextEngine,
+    ConversationEngine,
     DailySummaryService,
     IntentEngine,
     PlannerService,
@@ -39,6 +40,7 @@ from huli.memory import (
 from huli.security import AuthService, SecurityPolicy
 from huli.skills import (
     AgendaSkill,
+    ConversationModeSkill,
     DailySummarySkill,
     FoundationSkill,
     KnowledgeSkill,
@@ -58,6 +60,7 @@ class HuliRuntime:
     skills: SkillRegistry
     intents: IntentEngine
     context: ContextEngine
+    conversation: ConversationEngine
     planner: PlannerService
     agenda: AgendaService
     daily_summary: DailySummaryService
@@ -104,6 +107,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
 
     intents = IntentEngine()
     context = ContextEngine(max_turns=resolved_settings.context_turns)
+    conversation = ConversationEngine()
 
     skills = SkillRegistry()
     skills.register(FoundationSkill())
@@ -112,6 +116,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(DailySummarySkill(daily_summary))
     skills.register(SmallTalkSkill(resolved_settings.timezone))
+    skills.register(ConversationModeSkill(conversation))
     skills.register(ProjectContextSkill(context, planner))
     skills.register(MemorySkill(memory))
     skills.register(KnowledgeSkill(knowledge))
@@ -121,6 +126,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         context=context,
         skills=skills,
         event_bus=events,
+        conversation=conversation,
     )
     security = SecurityPolicy(
         max_input_chars=resolved_settings.max_input_chars,
@@ -142,6 +148,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         skills=skills,
         intents=intents,
         context=context,
+        conversation=conversation,
         planner=planner,
         agenda=agenda,
         daily_summary=daily_summary,
