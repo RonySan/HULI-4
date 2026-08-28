@@ -31,60 +31,132 @@ class MessageRequest(BaseModel):
 
 def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
     resolved_runtime = runtime or build_runtime()
-    app = FastAPI(title="Huli API", version=__version__, docs_url="/docs", redoc_url=None)
+    app = FastAPI(
+        title="Huli API",
+        version=__version__,
+        docs_url="/docs",
+        redoc_url=None,
+    )
     app.state.runtime = resolved_runtime
 
-    def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(_bearer)) -> AuthenticatedUser:
+    def current_user(
+        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    ) -> AuthenticatedUser:
         if credentials is None or credentials.scheme.lower() != "bearer":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticação necessária.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Autenticação necessária.",
+            )
         try:
             return resolved_runtime.auth.validate_token(credentials.credentials)
         except AuthenticationError as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(exc),
+            ) from exc
 
-    def bearer_token(credentials: HTTPAuthorizationCredentials | None = Depends(_bearer)) -> str:
+    def bearer_token(
+        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    ) -> str:
         if credentials is None or credentials.scheme.lower() != "bearer":
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticação necessária.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Autenticação necessária.",
+            )
         return credentials.credentials
 
     @app.get("/health")
     def health() -> dict[str, object]:
-        return {"app": __app_name__, "version": __version__, "status": "ok", "environment": resolved_runtime.settings.environment, "schema_version": resolved_runtime.database.schema_version(), "skills": resolved_runtime.skills.names}
+        return {
+            "app": __app_name__,
+            "version": __version__,
+            "status": "ok",
+            "environment": resolved_runtime.settings.environment,
+            "schema_version": resolved_runtime.database.schema_version(),
+            "skills": resolved_runtime.skills.names,
+        }
 
     @app.post("/v1/auth/setup", status_code=status.HTTP_201_CREATED)
     def setup(payload: SetupRequest) -> dict[str, object]:
         if resolved_runtime.auth.has_users():
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A identidade proprietária da Huli já foi configurada.")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A identidade proprietária da Huli já foi configurada.",
+            )
         try:
             user = resolved_runtime.auth.create_owner(payload.username, payload.password)
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-        return {"id": user.id, "username": user.username, "password_protected": bool(payload.password)}
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+        return {
+            "id": user.id,
+            "username": user.username,
+            "password_protected": bool(payload.password),
+        }
 
     @app.post("/v1/auth/login")
     def login(payload: LoginRequest) -> dict[str, object]:
         try:
-            user, token = resolved_runtime.auth.authenticate(payload.username, payload.password)
+            user, token = resolved_runtime.auth.authenticate(
+                payload.username,
+                payload.password,
+            )
         except (AuthenticationError, ValueError) as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário ou senha inválidos.") from exc
-        return {"token_type": "bearer", "access_token": token, "user": {"id": user.id, "username": user.username}}
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuário ou senha inválidos.",
+            ) from exc
+        return {
+            "token_type": "bearer",
+            "access_token": token,
+            "user": {"id": user.id, "username": user.username},
+        }
 
     @app.get("/v1/me")
     def me(user: AuthenticatedUser = Depends(current_user)) -> dict[str, object]:
         return {"id": user.id, "username": user.username}
 
     @app.post("/v1/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
-    def logout(_user: AuthenticatedUser = Depends(current_user), token: str = Depends(bearer_token)) -> None:
+    def logout(
+        _user: AuthenticatedUser = Depends(current_user),
+        token: str = Depends(bearer_token),
+    ) -> None:
         resolved_runtime.auth.revoke_token(token)
 
     @app.post("/v1/messages")
-    def messages(payload: MessageRequest, user: AuthenticatedUser = Depends(current_user)) -> dict[str, object]:
+    def messages(
+        payload: MessageRequest,
+        user: AuthenticatedUser = Depends(current_user),
+    ) -> dict[str, object]:
         session_id = payload.session_id or f"api-user-{user.id}"
         try:
             resolved_runtime.security.validate_input(payload.text)
-            response = resolved_runtime.kernel.process(payload.text, metadata={"session_id": session_id, "username": user.username, "role": "owner"})
+            response = resolved_runtime.kernel.process(
+                payload.text,
+                metadata={
+                    "session_id": session_id,
+                    "username": user.username,
+                    "role": "owner",
+                },
+            )
         except (InvalidKernelInput, ValueError) as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-        return {"request_id": response.request_id, "session_id": session_id, "text": response.text, "handled_by": response.handled_by, "ok": response.ok}
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+
+        conversation = resolved_runtime.conversation.snapshot(session_id)
+        return {
+            "request_id": response.request_id,
+            "session_id": session_id,
+            "text": response.text,
+            "handled_by": response.handled_by,
+            "ok": response.ok,
+            "conversation_mode": conversation.mode.value,
+            "conversation_signal": conversation.signal.value,
+            "humor_allowed": conversation.humor_allowed,
+        }
 
     return app
