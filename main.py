@@ -1,4 +1,4 @@
-"""Ponto de entrada local da Huli 4 durante a Fase 2."""
+"""Ponto de entrada local da Huli 4."""
 
 from __future__ import annotations
 
@@ -91,17 +91,18 @@ def _metadata(session: CliSession) -> dict[str, object]:
 
 def run_cli() -> None:
     runtime = build_runtime()
-    print(f"{__app_name__} {__version__} — Fase 2: Memory Engine 4.0 em construção.")
+    print(f"{__app_name__} {__version__} — Fase 4: personalidade e conversação.")
     session = _authenticate(runtime)
     if session.is_guest:
         print(f"Huli: Bem-vindo, {session.username}. Modo visitante com acesso limitado.")
-        print("Visitante pode usar conversa básica, horário, ping e status.")
+        print("Visitante pode usar conversa básica, horário, ping, status e modos de conversa.")
     else:
         print(f"Huli: Bem-vindo, {session.username}.")
     print(
-        "Recursos atuais: contexto, tarefas, agenda, resumo, conversa, projetos "
-        "e memória de longo prazo controlada."
+        "Recursos atuais: contexto, tarefas, agenda, memória, conhecimento e "
+        "conversação contextual."
     )
+    print("Modos: automático, casual, profissional, sério e risco.")
     print("Digite 'sair' para encerrar.")
     try:
         while True:
@@ -125,6 +126,7 @@ def run_cli() -> None:
             print(f"Huli: {response.text}")
     finally:
         runtime.context.clear(session.session_id)
+        runtime.conversation.clear(session.session_id)
         if session.token:
             runtime.auth.revoke_token(session.token)
 
