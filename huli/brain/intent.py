@@ -21,6 +21,8 @@ class IntentName(StrEnum):
     TASK_COMPLETE = "task.complete"
     DAILY_SUMMARY = "daily.summary"
     SMALL_TALK = "smalltalk"
+    CONVERSATION_MODE_SET = "conversation.mode.set"
+    CONVERSATION_MODE_QUERY = "conversation.mode.query"
     PROJECT_SET = "project.set"
     PROJECT_QUERY = "project.query"
     MEMORY_REMEMBER = "memory.remember"
@@ -51,6 +53,22 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.CONVERSATION_MODE_SET,
+                re.compile(
+                    r"^(?:(?:ative|ativar|mude|mudar|use|usar)\s+)?modo\s+(?P<mode>automatico|auto|casual|profissional|serio|risco|seguro)$"
+                ),
+                0.999,
+                "conversation-mode-set",
+            ),
+            _IntentRule(
+                IntentName.CONVERSATION_MODE_QUERY,
+                re.compile(
+                    r"^(?:qual|mostre|mostrar|como esta)\s+(?:o\s+)?modo(?:\s+de\s+conversa|\s+conversacional)?(?:\s+atual)?$|^modo atual$"
+                ),
+                0.999,
+                "conversation-mode-query",
+            ),
             _IntentRule(
                 IntentName.KNOWLEDGE_RELATION,
                 re.compile(
@@ -190,7 +208,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.SMALL_TALK,
                 re.compile(
-                    r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: bom dia| boa tarde| boa noite)?|(?:bom dia|boa tarde|boa noite)(?: huli)?|(?:como (?:voce|vc) (?:esta|ta)|tudo bem)(?: huli)?|(?:quem e voce|quem e a huli)(?: huli)?|(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?|(?:tchau|ate logo|ate mais)(?: huli)?)$"
+                    r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: bom dia| boa tarde| boa noite)?|(?:bom dia|boa tarde|boa noite)(?: huli)?|(?:como (?:voce|vc) (?:esta|ta)|tudo bem)(?: huli)?|(?:quem e voce|quem e a huli|o que significa huli|qual o significado de huli|o que voce consegue fazer)(?: huli)?|(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?|(?:tchau|ate logo|ate mais)(?: huli)?)$"
                 ),
                 0.95,
                 "small-talk",
