@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 
 
 class SQLiteDatabase:
@@ -56,6 +56,9 @@ class SQLiteDatabase:
             if 4 not in applied:
                 self._migration_004_agenda(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (4)")
+            if 5 not in applied:
+                self._migration_005_memory(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (5)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -154,6 +157,42 @@ class SQLiteDatabase:
             );
             CREATE INDEX IF NOT EXISTS idx_appointments_status_start
             ON appointments(status, start_at);
+            """
+        )
+
+    @staticmethod
+    def _migration_005_memory(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                kind TEXT NOT NULL,
+                content TEXT NOT NULL,
+                normalized_content TEXT NOT NULL,
+                subject TEXT,
+                project TEXT,
+                sensitivity TEXT NOT NULL,
+                source TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                occurred_at TEXT,
+                valid_until TEXT,
+                metadata_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_accessed_at TEXT,
+                access_count INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_memories_owner_active_kind
+            ON memories(owner, is_active, kind, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_memories_owner_project_active
+            ON memories(owner, project, is_active, updated_at);
+
+            CREATE INDEX IF NOT EXISTS idx_memories_owner_content
+            ON memories(owner, normalized_content, is_active);
             """
         )
 

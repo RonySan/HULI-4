@@ -37,8 +37,8 @@ def run_validation() -> None:
         }
 
         require(
-            runtime.database.schema_version() == 4,
-            "Schema da Fase 1 não foi aplicado.",
+            runtime.database.schema_version() >= 4,
+            "Schema mínimo da Fase 1 não foi aplicado.",
         )
         require(
             runtime.kernel.process("oi huli, bom dia", metadata=meta).handled_by
