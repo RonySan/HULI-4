@@ -265,12 +265,14 @@ class VoiceService:
         input_provider: str = "auto",
         model_path: Path | None = None,
         input_device: str | int | None = None,
+        input_gain: float = 1.0,
     ) -> VoiceService:
         from huli.voice.local import LocalVoiceBackend
 
         return cls(
             LocalVoiceBackend(language=language, input_provider=input_provider,
-                              model_path=model_path, input_device=input_device),
+                              model_path=model_path, input_device=input_device,
+                              input_gain=input_gain),
             language=language,
             input_timeout=input_timeout,
             rate=rate,

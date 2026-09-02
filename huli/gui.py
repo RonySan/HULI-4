@@ -76,6 +76,7 @@ class HuliPanel:
             input_provider=settings.voice_input_provider,
             model_path=settings.voice_model_path,
             input_device=settings.voice_input_device,
+            input_gain=settings.voice_input_gain,
         )
         self.voice = VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
         self.alias_store = WakeAliasStore(

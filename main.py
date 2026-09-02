@@ -182,6 +182,7 @@ def _build_voice_session(runtime: HuliRuntime) -> VoiceSession:
         input_provider=settings.voice_input_provider,
         model_path=settings.voice_model_path,
         input_device=settings.voice_input_device,
+        input_gain=settings.voice_input_gain,
     )
     return VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
 

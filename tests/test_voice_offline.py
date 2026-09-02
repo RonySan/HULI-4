@@ -1,5 +1,6 @@
 """Testes de voz sem ativar hardware, explicitamente distintos do teste real."""
 
+from array import array
 import json
 import subprocess
 from types import SimpleNamespace
@@ -8,7 +9,12 @@ import pytest
 
 from huli.brain.intent import IntentEngine, IntentName
 from huli.voice import VoiceError, VoiceTimeoutError, VoiceUnavailableError, WindowsSpeechBackend
-from huli.voice.local import LocalVoiceBackend, PhoneticWakeInput, VoskInput
+from huli.voice.local import (
+    LocalVoiceBackend,
+    PhoneticWakeInput,
+    VoskInput,
+    amplify_pcm16,
+)
 from huli.voice.transcript import is_spoken_vocative, normalize_spoken_vocative
 
 
@@ -24,6 +30,14 @@ def test_missing_model_never_triggers_a_download(tmp_path):
     backend = VoskInput(tmp_path)
     with pytest.raises(VoiceUnavailableError, match="Modelo português ausente"):
         backend.prepare()
+
+
+def test_amplify_pcm16_increases_quiet_audio_and_clips_peaks():
+    source = array("h", [1_000, -1_000, 20_000, -20_000]).tobytes()
+    amplified = array("h")
+    amplified.frombytes(amplify_pcm16(source, 2.0))
+
+    assert amplified.tolist() == [2_000, -2_000, 32_767, -32_768]
 
 
 def fake_input(tmp_path, monkeypatch, *, confidence=0.99, overflow=False, accepted=True, transcripts=None):

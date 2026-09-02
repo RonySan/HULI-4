@@ -26,13 +26,30 @@ from huli.voice.transcript import (
 )
 
 
+def amplify_pcm16(block: bytes, gain: float) -> bytes:
+    """Aplica ganho a PCM16 em memória, limitando picos sem estouro numérico."""
+    if gain == 1.0 or not block:
+        return block
+    samples = array("h")
+    samples.frombytes(block)
+    for index, sample in enumerate(samples):
+        samples[index] = max(-32_768, min(32_767, round(sample * gain)))
+    return samples.tobytes()
+
+
 class PhoneticWakeInput:
     """Detector de palavra-chave por fonemas, sem converter Huli em outra palavra."""
 
     sample_rate = 16_000
 
-    def __init__(self, device: str | int | None = None) -> None:
+    def __init__(
+        self,
+        device: str | int | None = None,
+        *,
+        input_gain: float = 1.0,
+    ) -> None:
         self.device = device
+        self.input_gain = input_gain
         self._decoder = None
         self._decoder_lock = threading.Lock()
         self._listen_lock = threading.Lock()
@@ -158,7 +175,7 @@ class PhoneticWakeInput:
                     except queue.Empty:
                         continue
                     converted = self._resample(
-                        block,
+                        amplify_pcm16(block, self.input_gain),
                         source_rate,
                         self.sample_rate,
                     )
@@ -185,9 +202,16 @@ class PhoneticWakeInput:
 
 
 class VoskInput:
-    def __init__(self, model_path: Path, device: str | int | None = None) -> None:
+    def __init__(
+        self,
+        model_path: Path,
+        device: str | int | None = None,
+        *,
+        input_gain: float = 1.0,
+    ) -> None:
         self.model_path = Path(model_path)
         self.device = device
+        self.input_gain = input_gain
         self._model = None
         self._model_lock = threading.Lock()
         self._listen_lock = threading.Lock()
@@ -294,7 +318,7 @@ class VoskInput:
                         block = audio.get(timeout=min(0.2, max(0.01, deadline - time.monotonic())))
                     except queue.Empty:
                         continue
-                    if recognizer.AcceptWaveform(block):
+                    if recognizer.AcceptWaveform(amplify_pcm16(block, self.input_gain)):
                         text = self._result_text(
                             recognizer.Result(),
                             allow_wake_word=not normalize_transcript,
@@ -324,14 +348,23 @@ class VoskInput:
 
 class LocalVoiceBackend:
     def __init__(self, *, language: str = "pt-BR", input_provider: str = "auto",
-                 model_path: Path | None = None, input_device: str | int | None = None) -> None:
+                 model_path: Path | None = None, input_device: str | int | None = None,
+                 input_gain: float = 1.0) -> None:
         from huli.infrastructure.config import APP_ROOT
 
         self.language = language
         self.input_provider = input_provider
         self.synthesis = WindowsSpeechBackend(language=language)
-        self.vosk = VoskInput(model_path or APP_ROOT / "models" / "vosk-pt", input_device)
-        self.phonetic_wake = PhoneticWakeInput(input_device)
+        self.input_gain = input_gain
+        self.vosk = VoskInput(
+            model_path or APP_ROOT / "models" / "vosk-pt",
+            input_device,
+            input_gain=input_gain,
+        )
+        self.phonetic_wake = PhoneticWakeInput(
+            input_device,
+            input_gain=input_gain,
+        )
 
     def capabilities(self) -> VoiceCapabilities:
         native = self.synthesis.capabilities()
@@ -346,7 +379,7 @@ class LocalVoiceBackend:
                 wake_detail = " Detector fonético Huli/Ruli: pronto."
             except VoiceError as exc:
                 wake_detail = f" Detector fonético: {exc}"
-            return VoiceCapabilities(native.output_available, True, "windows-tts+vosk-offline", f"{native.detail} Escuta Vosk: pronta para teste; microfone: {microphone}.{wake_detail}")
+            return VoiceCapabilities(native.output_available, True, "windows-tts+vosk-offline", f"{native.detail} Escuta Vosk: pronta para teste; microfone: {microphone}; ganho: {self.input_gain:.1f}x.{wake_detail}")
         except VoiceError as exc:
             if self.input_provider == "auto" and native.input_available:
                 return native

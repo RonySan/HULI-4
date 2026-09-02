@@ -41,6 +41,7 @@ class Settings:
     voice_input_provider: str = "auto"
     voice_model_path: Path = APP_ROOT / "models" / "vosk-pt"
     voice_input_device: str | int | None = None
+    voice_input_gain: float = 1.8
     voice_start_listening: bool = False
     voice_wake_enabled: bool = False
     voice_wake_cycle_timeout: int = 30
@@ -109,6 +110,13 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         raise ValueError("HULI_VOICE_INPUT_PROVIDER deve ser auto, vosk ou windows.")
     raw_device = values.get("HULI_VOICE_INPUT_DEVICE", "").strip()
     voice_input_device = int(raw_device) if raw_device.isdigit() else raw_device or None
+    voice_input_gain = _read_float(
+        values,
+        "HULI_VOICE_INPUT_GAIN",
+        1.8,
+        minimum=0.5,
+        maximum=4.0,
+    )
     return Settings(
         environment=environment,
         log_level=log_level,
@@ -131,6 +139,7 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         voice_input_provider=voice_input_provider,
         voice_model_path=app_path(values.get("HULI_VOICE_MODEL_PATH", "models/vosk-pt")),
         voice_input_device=voice_input_device,
+        voice_input_gain=voice_input_gain,
         voice_start_listening=_read_bool(values, "HULI_VOICE_START_LISTENING", False),
         voice_wake_enabled=_read_bool(values, "HULI_VOICE_WAKE_ENABLED", False),
         voice_wake_cycle_timeout=_read_int(
