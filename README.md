@@ -21,9 +21,9 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.13`
+- **Versão:** `4.0.0-alpha.14`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
-- **Módulo atual:** síntese, microfone, modo contínuo e proteção do diário falado
+- **Módulo atual:** voz contínua, agenda natural, proprietário local e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
@@ -64,7 +64,7 @@ EventBus + SQLite
         └── diário: AES-256-GCM + índice cego
 
 Interface local (Windows)
-  ├── microfone → System.Speech → Kernel
+  ├── microfone → PocketSphinx/Vosk → Kernel
   └── KernelResponse → System.Speech → alto-falante
 ```
 
@@ -80,6 +80,8 @@ de domínio. OpenAI e Ollama continuam fora desta fase.
 - `agenda.query`
 - `agenda.create`
 - `agenda.cancel`
+- `agenda.complete`
+- `app.open`
 - `task.create`
 - `task.list`
 - `task.complete`
@@ -110,6 +112,10 @@ A `alpha.10` entende variações naturais verificadas no uso real, como
 
 A `alpha.13` também entende `agendas` e `o que temos na agenda`, corrigindo as
 duas frases que falharam na validação local.
+
+A `alpha.14` adiciona ganho digital configurável do microfone, horários falados
+em português, conclusão de compromissos, entrada local direta como Rony e
+abertura segura de programas instalados no Windows.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
@@ -142,7 +148,7 @@ e voz offline. Consulte [instruções e limites](docs/CORRECOES_2026_08_31.md).
 
 - `INICIAR_HULI.bat`: iniciar pelo teclado.
 - `INICIAR_PAINEL.bat`: abrir o painel com botões de voz.
-- `INICIAR_COM_VOZ.bat`: falar e ouvir depois do login.
+- `INICIAR_COM_VOZ.bat`: falar e ouvir no modo proprietário local.
 - `TESTAR_VOZ.bat`: teste real sem executar comandos nem acessar dados pessoais.
 - `INSTALAR_VOZ_LOCAL.bat`: dependências opcionais e modelo português oficial.
 
@@ -151,9 +157,10 @@ instalada no Windows. A configuração distingue fala, escuta e teste acústico.
 
 ## Voz local — fundação original alpha.13
 
-A primeira fundação de voz usa `System.Speech`, já presente no Windows, e não
-envia áudio nem transcrições a serviços externos. Ela funciona depois do login e
-não ignora as permissões do proprietário/visitante.
+A fala usa `System.Speech`; a escuta usa Vosk e a ativação usa PocketSphinx,
+sempre localmente. Áudio e transcrições não são enviados a serviços externos.
+O ganho digital padrão do microfone é `1.8x` e pode ser ajustado por
+`HULI_VOICE_INPUT_GAIN` entre `0.5` e `4.0`.
 
 Comandos disponíveis no terminal:
 
@@ -167,9 +174,9 @@ parar voz           retorna ao teclado
 ```
 
 O modo contínuo volta ao teclado após o tempo de inatividade. Respostas do
-diário privado nunca são lidas automaticamente em voz alta. Palavra de ativação,
-interrupção durante a fala e identificação biométrica de quem falou continuam
-planejadas para evoluções posteriores da Fase 9.
+diário privado nunca são lidas automaticamente em voz alta. Interrupção durante
+a fala e identificação biométrica de quem falou continuam planejadas para
+evoluções posteriores da Fase 9.
 
 Para o reconhecimento em português, o Windows precisa ter o pacote de fala
 `Português (Brasil)` instalado em **Configurações > Hora e idioma > Idioma e
@@ -223,7 +230,7 @@ Para falar e digitar na mesma sessão, use:
 .\INICIAR_COM_VOZ.bat
 ```
 
-Depois do login, a Huli aguarda o som de `Huli/Ruli` em segundo plano, sem
+No modo proprietário local, a Huli aguarda o som de `Huli/Ruli` em segundo plano, sem
 depender da transcrição do Vosk. Diga `Huli`, espere `Estou ouvindo` e então
 fale o comando. Ao começar a digitar, o teclado tem prioridade e a captura
 atual é cancelada.
@@ -236,7 +243,7 @@ sem microfone continua disponível em `.\INICIAR_HULI.bat`.
 
 `CONFIGURAR_DESPERTADOR.bat` registra no Windows o despertador diário das
 05:50. Ele usa uma melodia local gratuita, oferece soneca de 10 minutos e pode
-abrir o painel com fala e escuta contínua preparadas após o login.
+abrir o painel diretamente com fala e escuta contínua preparadas.
 
 Ao dizer `Huli, bom dia`, o proprietário ouve a hora, somente os compromissos
 do dia, o clima de São Paulo e uma sugestão curta de roupa. Sem internet, hora e
@@ -258,13 +265,31 @@ Consultas são executadas imediatamente. Comandos de voz que alteram dados ou
 acessam o diário ficam pendentes por 30 segundos e só prosseguem quando o dono
 digita `confirmar voz`; a confirmação também passa pelas permissões normais.
 
-A senha do proprietário é opcional. Usuários desconhecidos podem entrar em modo visitante com permissões limitadas.
-O restante da Huli continua aceitando proprietário sem senha, mas o diário fica
-bloqueado até que uma senha seja configurada:
+O painel e o terminal entram diretamente como `Rony` por padrão. Esse modo é
+controlado por `HULI_LOCAL_LOGIN_ENABLED=false`; para restaurar a tela anterior
+de proprietário/senha/visitante, defina o valor como `true`. A API local mantém
+sua autenticação independentemente dessa opção.
+
+O diário permanece bloqueado enquanto o login local estiver desativado, pois a
+senha é necessária para abrir sua chave criptográfica. Para reativá-lo, habilite
+o login local e use a senha existente. Para configurar ou trocar a senha:
 
 ```powershell
 python tools/set_local_password.py
 ```
+
+Exemplos da agenda e dos programas na `alpha.14`:
+
+```text
+agenda para amanhã reunião com Paulo às oito horas da manhã
+concluir compromisso de hoje
+abrir o Google Chrome
+Huli, abra a calculadora
+```
+
+A Huli procura programas no Menu Iniciar, no registro de aplicativos do Windows
+e em utilitários conhecidos. Ela não executa texto livre como PowerShell, não
+aceita parâmetros, URLs, scripts ou caminhos fornecidos na conversa.
 
 Senhas novas precisam ter pelo menos 8 caracteres. Senhas curtas criadas em
 versões anteriores continuam aceitas apenas para permitir login, migração e

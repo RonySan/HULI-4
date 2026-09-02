@@ -48,3 +48,4 @@ models/
 # Tests / coverage
 .coverage
 htmlcov/
+.test-temp-*/

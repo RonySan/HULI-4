@@ -15,7 +15,14 @@ from huli.security import AuthenticationError
 
 @pytest.fixture
 def runtime(tmp_path):
-    return build_runtime(Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path))
+    return build_runtime(
+        Settings(
+            environment="test",
+            log_level="CRITICAL",
+            data_dir=tmp_path,
+            local_login_enabled=True,
+        )
+    )
 
 
 def meta():
