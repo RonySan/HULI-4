@@ -121,6 +121,11 @@ def _first_run_setup(runtime: HuliRuntime) -> CliSession:
 
 
 def _authenticate(runtime: HuliRuntime) -> CliSession:
+    if not runtime.settings.local_login_enabled:
+        return CliSession(
+            username=runtime.settings.local_owner_name,
+            role="owner",
+        )
     if not runtime.auth.has_users():
         return _first_run_setup(runtime)
     for _attempt in range(3):
@@ -154,6 +159,11 @@ def _authenticate(runtime: HuliRuntime) -> CliSession:
 
 def _can_execute(runtime: HuliRuntime, session: CliSession, text: str) -> bool:
     if session.role == "owner":
+        if not runtime.settings.local_login_enabled:
+            return (
+                session.username.casefold()
+                == runtime.settings.local_owner_name.casefold()
+            )
         try:
             user = runtime.auth.validate_token(session.token or "")
         except AuthenticationError:
@@ -253,6 +263,11 @@ def run_cli() -> None:
         print("Visitante pode usar conversa básica, horário, ping e status.")
     else:
         print(f"Huli: Bem-vindo, {session.username}.")
+        if not runtime.settings.local_login_enabled:
+            print(
+                "Huli: Modo proprietário local ativo; login e senha estão "
+                "desativados por configuração."
+            )
         unlock_result = runtime.journal_vault.last_unlock_result(session.username)
         if unlock_result and unlock_result.migrated_entries:
             print(
@@ -264,7 +279,12 @@ def run_cli() -> None:
         "Recursos atuais: contexto, tarefas, agenda, resumo, projetos, memória, "
         "conhecimento estruturado, personalidade contextual, diário privado e voz."
     )
-    if not session.is_guest and runtime.auth.requires_password(session.username):
+    if not runtime.settings.local_login_enabled:
+        print(
+            "Diário criptografado bloqueado neste modo. Para usá-lo, reative "
+            "o login local em HULI_LOCAL_LOGIN_ENABLED."
+        )
+    elif not session.is_guest and runtime.auth.requires_password(session.username):
         print(
             "Cofre aberto: use 'diário: seu texto' ou 'como uso meu diário?' para os exemplos."
         )

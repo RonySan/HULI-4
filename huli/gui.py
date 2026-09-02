@@ -97,7 +97,11 @@ class HuliPanel:
         root.geometry("920x650")
         root.minsize(720, 500)
         root.protocol("WM_DELETE_WINDOW", self.close)
-        self._show_login()
+        if settings.local_login_enabled:
+            self._show_login()
+        else:
+            self.session = PanelSession(settings.local_owner_name, "owner")
+            self._show_main()
         self.root.after(60, self._poll_wake)
 
     def _clear(self) -> None:
@@ -174,7 +178,15 @@ class HuliPanel:
         ).pack(side="left")
         self.status_var = tk.StringVar(value="Escuta contínua desligada")
         ttk.Label(top, textvariable=self.status_var).pack(side="left", padx=24)
-        ttk.Button(top, text="Sair da sessão", command=self.logout).pack(side="right")
+        ttk.Button(
+            top,
+            text=(
+                "Sair da sessão"
+                if self.runtime.settings.local_login_enabled
+                else "Fechar"
+            ),
+            command=self.logout,
+        ).pack(side="right")
 
         self.transcript = scrolledtext.ScrolledText(
             self.root,
@@ -256,6 +268,11 @@ class HuliPanel:
     def _authorized(self, text: str) -> bool:
         session = self._require_session()
         if session.role == "owner":
+            if not self.runtime.settings.local_login_enabled:
+                return (
+                    session.username.casefold()
+                    == self.runtime.settings.local_owner_name.casefold()
+                )
             try:
                 user = self.runtime.auth.validate_token(session.token or "")
             except AuthenticationError:
@@ -635,6 +652,9 @@ class HuliPanel:
         self.root.after(60, self._poll_wake)
 
     def logout(self) -> None:
+        if not self.runtime.settings.local_login_enabled:
+            self.close()
+            return
         self._end_session()
         self._show_login()
 

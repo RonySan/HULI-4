@@ -21,6 +21,8 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_WEATHER_LATITUDE": "-22,90",
             "HULI_WEATHER_LONGITUDE": "-47.06",
             "HULI_JOURNAL_LOCK_MINUTES": "7",
+            "HULI_LOCAL_LOGIN_ENABLED": "não",
+            "HULI_LOCAL_OWNER_NAME": "Rony",
             "HULI_VOICE_AUTO_SPEAK": "sim",
             "HULI_VOICE_INPUT_TIMEOUT": "12",
             "HULI_VOICE_LANGUAGE": "pt-BR",
@@ -41,6 +43,8 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.weather_latitude == -22.90
     assert settings.weather_longitude == -47.06
     assert settings.journal_lock_minutes == 7
+    assert settings.local_login_enabled is False
+    assert settings.local_owner_name == "Rony"
     assert settings.voice_auto_speak is True
     assert settings.voice_input_timeout == 12
     assert settings.voice_language == "pt-BR"

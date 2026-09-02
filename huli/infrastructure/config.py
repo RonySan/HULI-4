@@ -33,6 +33,8 @@ class Settings:
     weather_longitude: float = -46.6333
     context_turns: int = 20
     journal_lock_minutes: int = 15
+    local_login_enabled: bool = False
+    local_owner_name: str = "Rony"
     voice_auto_speak: bool = False
     voice_input_timeout: int = 8
     voice_language: str = "pt-BR"
@@ -92,6 +94,16 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         minimum=1,
         maximum=24 * 60,
     )
+    local_login_enabled = _read_bool(
+        values,
+        "HULI_LOCAL_LOGIN_ENABLED",
+        False,
+    )
+    local_owner_name = " ".join(
+        values.get("HULI_LOCAL_OWNER_NAME", "Rony").split()
+    ).strip()
+    if not local_owner_name or len(local_owner_name) > 64:
+        raise ValueError("HULI_LOCAL_OWNER_NAME deve ter entre 1 e 64 caracteres.")
     voice_auto_speak = _read_bool(values, "HULI_VOICE_AUTO_SPEAK", False)
     voice_input_timeout = _read_int(
         values,
@@ -131,6 +143,8 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         weather_longitude=weather_longitude,
         context_turns=context_turns,
         journal_lock_minutes=journal_lock_minutes,
+        local_login_enabled=local_login_enabled,
+        local_owner_name=local_owner_name,
         voice_auto_speak=voice_auto_speak,
         voice_input_timeout=voice_input_timeout,
         voice_language=voice_language,

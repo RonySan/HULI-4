@@ -12,7 +12,12 @@ from huli.infrastructure import Settings
 
 def build_test_runtime(tmp_path: Path):
     return build_runtime(
-        Settings(environment="test", log_level="CRITICAL", data_dir=tmp_path)
+        Settings(
+            environment="test",
+            log_level="CRITICAL",
+            data_dir=tmp_path,
+            local_login_enabled=True,
+        )
     )
 
 
@@ -77,6 +82,26 @@ def test_first_run_can_create_owner_without_password(tmp_path: Path, monkeypatch
     assert session.username == "rony"
     assert session.token
     assert runtime.auth.requires_password("rony") is False
+
+
+def test_local_owner_mode_skips_credentials_without_deleting_auth(tmp_path: Path) -> None:
+    runtime = build_runtime(
+        Settings(
+            environment="test",
+            log_level="CRITICAL",
+            data_dir=tmp_path,
+            local_login_enabled=False,
+            local_owner_name="Rony",
+        )
+    )
+
+    session = cli._authenticate(runtime)
+
+    assert session.username == "Rony"
+    assert session.role == "owner"
+    assert session.token is None
+    assert cli._can_execute(runtime, session, "listar minhas memórias")
+    assert not runtime.auth.has_users()
 
 
 def test_unknown_username_enters_guest_mode(tmp_path: Path, monkeypatch) -> None:
