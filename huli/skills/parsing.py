@@ -102,6 +102,79 @@ def extract_cancel_target(text: str) -> str:
     return " ".join(value.split()).strip(" #.,")
 
 
+def extract_appointment_completion_target(text: str) -> str:
+    value = strip_huli_prefix(text)
+    value = re.sub(r"^(?:pode\s+)?", "", value, flags=re.IGNORECASE)
+    value = re.sub(
+        r"^(?:conclui|concluir|conclua|finaliza|finalizar|finalize|realiza|realizar|realize|marque|marca)\s+",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+    value = re.sub(
+        r"^(?:(?:o|esse|este)\s+)?(?:compromisso|evento|agendamento)\s*",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+    value = re.sub(r"^(?:de|do|e)\s+hoje$", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s+como\s+(?:concluido|realizado)\s*$", "", value, flags=re.IGNORECASE)
+    return " ".join(value.split()).strip(" #.,")
+
+
+_SPOKEN_HOURS = {
+    "um": 1,
+    "uma": 1,
+    "dois": 2,
+    "duas": 2,
+    "tres": 3,
+    "quatro": 4,
+    "cinco": 5,
+    "seis": 6,
+    "sete": 7,
+    "oito": 8,
+    "nove": 9,
+    "dez": 10,
+    "onze": 11,
+    "doze": 12,
+    "treze": 13,
+    "catorze": 14,
+    "quatorze": 14,
+    "quinze": 15,
+    "dezesseis": 16,
+    "dezessete": 17,
+    "dezoito": 18,
+    "dezenove": 19,
+    "vinte": 20,
+    "vinte e um": 21,
+    "vinte e uma": 21,
+    "vinte e dois": 22,
+    "vinte e duas": 22,
+    "vinte e tres": 23,
+}
+
+
+def _spoken_time(normalized: str) -> tuple[int, int, str] | None:
+    words = "|".join(
+        re.escape(word) for word in sorted(_SPOKEN_HOURS, key=len, reverse=True)
+    )
+    match = re.search(
+        rf"\bas\s+(?P<hour>{words})\s*(?:h|horas?)?(?:\s+e\s+(?P<minute>meia|\d{{1,2}}))?\b",
+        normalized,
+    )
+    if match is None:
+        return None
+    hour = _SPOKEN_HOURS[match.group("hour")]
+    minute_value = match.group("minute")
+    minute = 30 if minute_value == "meia" else int(minute_value or 0)
+    suffix = normalized[match.end(): match.end() + 20]
+    if re.match(r"\s+d[ae]\s+(?:tarde|noite)\b", suffix) and hour < 12:
+        hour += 12
+    if re.match(r"\s+d[ae]\s+manha\b", suffix) and hour == 12:
+        hour = 0
+    return hour, minute, match.group(0)
+
+
 def extract_project_name(text: str) -> str | None:
     raw = strip_huli_prefix(text).strip(" ?.!")
     patterns = (
@@ -136,13 +209,21 @@ def parse_appointment_request(
     )
     if time_match is None:
         time_match = re.search(r"\b(\d{1,2}):(\d{2})\b", raw)
-    if time_match is None:
+    spoken_time = _spoken_time(normalized) if time_match is None else None
+    if time_match is None and spoken_time is None:
         raise ValueError(
             "Informe o horário do compromisso, por exemplo: amanhã às 15:00."
         )
 
-    hour = int(time_match.group(1))
-    minute = int(time_match.group(2) or 0)
+    if spoken_time is not None:
+        hour, minute, spoken_fragment = spoken_time
+    else:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2) or 0)
+        spoken_fragment = ""
+        time_suffix = normalized[time_match.end(): time_match.end() + 20]
+        if re.match(r"\s+d[ae]\s+(?:tarde|noite)\b", time_suffix) and hour < 12:
+            hour += 12
     if hour > 23 or minute > 59:
         raise ValueError("O horário informado é inválido.")
 
@@ -220,7 +301,7 @@ def parse_appointment_request(
 
     title = raw
     title = re.sub(
-        r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\s+(?:(?:para|pra)\s+mim\s+)?(?:(?:um|uma)\s+)?(?:(?:compromisso|evento|agendamento)\s+)?",
+        r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\s+(?:(?:para|pra)(?:\s+mim)?\s+)?(?:(?:um|uma)\s+)?(?:(?:compromisso|evento|agendamento)\s+)?",
         "",
         title,
         flags=re.IGNORECASE,
@@ -245,6 +326,20 @@ def parse_appointment_request(
         flags=re.IGNORECASE,
     )
     title = re.sub(r"\b\d{1,2}:\d{2}\b", "", title)
+    if spoken_fragment:
+        title = re.sub(
+            r"\b(?:as|às)\s+(?:um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte(?:\s+e\s+(?:um|uma|dois|duas|tr[eê]s))?)\s*(?:h|horas?)?(?:\s+e\s+(?:meia|\d{1,2}))?(?:\s+d[ae]\s+(?:manh[aã]|tarde|noite))?\b",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
+    else:
+        title = re.sub(
+            r"\s+d[ae]\s+(?:manh[aã]|tarde|noite)\b",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
     title = " ".join(title.split()).strip(" ,.-:")
     if not title:
         raise ValueError("Informe o assunto do compromisso.")

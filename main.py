@@ -65,6 +65,7 @@ _WAKE_WRITE_INTENTS = frozenset(
     {
         "agenda.create",
         "agenda.cancel",
+        "agenda.complete",
         "task.create",
         "task.complete",
         "project.set",

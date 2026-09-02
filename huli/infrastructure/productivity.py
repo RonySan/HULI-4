@@ -165,6 +165,46 @@ class AppointmentRepository:
             updated = connection.execute("SELECT * FROM appointments WHERE id = ?", (int(row["id"]),)).fetchone()
         return self._from_row(updated)
 
+    def complete(self, identifier: str) -> AppointmentRecord | None:
+        normalized = " ".join(str(identifier or "").split()).strip()
+        if not normalized:
+            return None
+        with self.database.connect() as connection:
+            if normalized.isdigit():
+                row = connection.execute(
+                    "SELECT * FROM appointments WHERE id = ? AND status = 'scheduled'",
+                    (int(normalized),),
+                ).fetchone()
+            else:
+                candidates = connection.execute(
+                    "SELECT * FROM appointments WHERE status = 'scheduled' ORDER BY start_at ASC"
+                ).fetchall()
+                matches = [
+                    item
+                    for item in candidates
+                    if _description_key(normalized)
+                    in _description_key(str(item["title"]))
+                ]
+                if len(matches) > 1:
+                    raise ValueError(
+                        "Encontrei mais de um compromisso. Informe o número: "
+                        + ", ".join(
+                            f"#{item['id']} {item['title']}" for item in matches[:5]
+                        )
+                    )
+                row = matches[0] if matches else None
+            if row is None:
+                return None
+            connection.execute(
+                "UPDATE appointments SET status = 'completed' WHERE id = ?",
+                (int(row["id"]),),
+            )
+            updated = connection.execute(
+                "SELECT * FROM appointments WHERE id = ?",
+                (int(row["id"]),),
+            ).fetchone()
+        return self._from_row(updated)
+
     @staticmethod
     def _from_row(row) -> AppointmentRecord:
         if row is None:

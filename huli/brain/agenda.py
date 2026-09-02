@@ -46,3 +46,16 @@ class AgendaService:
         if appointment is not None:
             self.events.publish("agenda.appointment.cancelled", {"appointment_id": appointment.id, "title": appointment.title, "start_at": appointment.start_at})
         return appointment
+
+    def complete(self, identifier: str) -> AppointmentRecord | None:
+        appointment = self.repository.complete(identifier)
+        if appointment is not None:
+            self.events.publish(
+                "agenda.appointment.completed",
+                {
+                    "appointment_id": appointment.id,
+                    "title": appointment.title,
+                    "start_at": appointment.start_at,
+                },
+            )
+        return appointment

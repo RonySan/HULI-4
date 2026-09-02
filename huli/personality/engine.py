@@ -30,6 +30,7 @@ class PersonalityEngine:
     _RISK_INTENTS = {
         "memory.forget",
         "agenda.cancel",
+        "agenda.complete",
         "journal.delete",
     }
     _PRIVATE_PREFIXES = ("journal.",)

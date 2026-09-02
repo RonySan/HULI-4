@@ -34,3 +34,10 @@ def test_planner_and_agenda_round_trip(tmp_path: Path) -> None:
     )
     assert agenda.today(datetime(2030, 5, 10, 9, 0, tzinfo=tz))[0].id == item.id
     assert agenda.cancel(str(item.id)).status == "cancelled"
+
+    completed = agenda.create(
+        "vistoria",
+        datetime(2030, 5, 10, 16, 0, tzinfo=tz),
+    )
+    assert agenda.complete(str(completed.id)).status == "completed"
+    assert agenda.today(datetime(2030, 5, 10, 9, 0, tzinfo=tz)) == ()

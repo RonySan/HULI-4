@@ -8,6 +8,7 @@ import re
 from huli.brain.agenda import AgendaService
 from huli.core.contracts import KernelRequest, KernelResponse
 from huli.skills.parsing import (
+    extract_appointment_completion_target,
     extract_cancel_target,
     normalize,
     parse_appointment_request,
@@ -16,7 +17,7 @@ from huli.skills.parsing import (
 
 class AgendaSkill:
     name = "agenda"
-    intents = ("agenda.create", "agenda.query", "agenda.cancel")
+    intents = ("agenda.create", "agenda.query", "agenda.cancel", "agenda.complete")
 
     def __init__(self, agenda: AgendaService, timezone_name: str) -> None:
         self.agenda = agenda
@@ -30,7 +31,11 @@ class AgendaSkill:
         project = str(request.metadata.get("active_project") or "").strip() or None
         if intent == "agenda.create":
             try:
-                title, start_at = parse_appointment_request(request.text, timezone_name=self.timezone_name)
+                title, start_at = parse_appointment_request(
+                    request.text,
+                    timezone_name=self.timezone_name,
+                    now=self.agenda.now(),
+                )
             except ValueError as exc:
                 return self._response(request, str(exc), ok=False)
             item = self.agenda.create(title, start_at, project=project)
@@ -80,6 +85,38 @@ class AgendaSkill:
             if item is None:
                 return self._response(request, "Não encontrei um compromisso ativo com esse número ou descrição.", ok=False)
             return self._response(request, f"Compromisso #{item.id} cancelado: {item.title}.")
+        if intent == "agenda.complete":
+            target = extract_appointment_completion_target(request.text)
+            if not target:
+                items = self.agenda.today()
+                if not items:
+                    return self._response(
+                        request,
+                        "Não há compromisso ativo para hoje.",
+                        ok=False,
+                    )
+                if len(items) > 1:
+                    choices = ", ".join(f"#{item.id} {item.title}" for item in items)
+                    return self._response(
+                        request,
+                        f"Há mais de um compromisso hoje. Diga o número: {choices}.",
+                        ok=False,
+                    )
+                target = str(items[0].id)
+            try:
+                item = self.agenda.complete(target)
+            except ValueError as exc:
+                return self._response(request, str(exc), ok=False)
+            if item is None:
+                return self._response(
+                    request,
+                    "Não encontrei um compromisso ativo com esse número ou descrição.",
+                    ok=False,
+                )
+            return self._response(
+                request,
+                f"Compromisso #{item.id} concluído: {item.title}.",
+            )
         return self._response(request, "Não consegui executar essa ação da Agenda.", ok=False)
 
     def _response(self, request: KernelRequest, text: str, *, ok: bool = True) -> KernelResponse:

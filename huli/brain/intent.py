@@ -18,6 +18,7 @@ class IntentName(StrEnum):
     AGENDA_QUERY = "agenda.query"
     AGENDA_CREATE = "agenda.create"
     AGENDA_CANCEL = "agenda.cancel"
+    AGENDA_COMPLETE = "agenda.complete"
     TASK_CREATE = "task.create"
     TASK_LIST = "task.list"
     TASK_COMPLETE = "task.complete"
@@ -238,9 +239,17 @@ class IntentEngine:
                 "agenda-cancel",
             ),
             _IntentRule(
+                IntentName.AGENDA_COMPLETE,
+                re.compile(
+                    r"^(?:pode\s+)?(?:conclui|concluir|conclua|finaliza|finalizar|finalize|realiza|realizar|realize|marque|marca)\b.*\b(?:compromisso|evento|agendamento)\b"
+                ),
+                0.985,
+                "agenda-complete",
+            ),
+            _IntentRule(
                 IntentName.AGENDA_CREATE,
                 re.compile(
-                    r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\b.*(?:\bas\s+\d{1,2}(?::\d{2})?\s*(?:h|horas)?\b|\b\d{1,2}:\d{2}\b)"
+                    r"^(?:agenda|agende|marque|marca|cria|criar|adicione|adiciona)\b.*(?:\bas\s+(?:\d{1,2}(?::\d{2})?|(?:uma?|duas?|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|vinte e uma|vinte e duas|vinte e tres))\s*(?:h|horas?)?\b|\b\d{1,2}:\d{2}\b)"
                 ),
                 0.97,
                 "agenda-create",
