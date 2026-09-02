@@ -11,6 +11,7 @@ from huli.brain import (
     ContextEngine,
     DailySummaryService,
     IntentEngine,
+    OpenMeteoWeatherService,
     PlannerService,
 )
 from huli.core import EventBus, Kernel
@@ -44,6 +45,7 @@ from huli.memory import (
 )
 from huli.personality import PersonalityEngine
 from huli.security import AuthService, JournalVault, SecurityPolicy
+from huli.security.privacy import filter_private_input
 from huli.skills import (
     AgendaSkill,
     ConversationSkill,
@@ -52,6 +54,7 @@ from huli.skills import (
     JournalSkill,
     KnowledgeSkill,
     MemorySkill,
+    MorningBriefingSkill,
     PlannerSkill,
     ProjectContextSkill,
     SkillRegistry,
@@ -70,6 +73,7 @@ class HuliRuntime:
     personality: PersonalityEngine
     planner: PlannerService
     agenda: AgendaService
+    weather: OpenMeteoWeatherService
     daily_summary: DailySummaryService
     memory: MemoryEngine
     memory_repository: MemoryRepository
@@ -117,6 +121,12 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     appointments = AppointmentRepository(database)
     planner = PlannerService(tasks, events)
     agenda = AgendaService(appointments, events, resolved_settings.timezone)
+    weather = OpenMeteoWeatherService(
+        location=resolved_settings.weather_location,
+        latitude=resolved_settings.weather_latitude,
+        longitude=resolved_settings.weather_longitude,
+        timezone_name=resolved_settings.timezone,
+    )
     daily_summary = DailySummaryService(planner, agenda)
 
     memory_repository = MemoryRepository(database)
@@ -153,6 +163,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(PlannerSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(DailySummarySkill(daily_summary))
+    skills.register(MorningBriefingSkill(agenda, weather))
     skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
     skills.register(ConversationSkill(context))
     skills.register(JournalSkill(journal, resolved_settings.timezone, auth))
@@ -167,7 +178,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         event_bus=events,
         personality=personality,
     )
-    kernel = Kernel(handler=dispatcher, event_bus=events)
+    kernel = Kernel(handler=dispatcher, event_bus=events, input_filter=filter_private_input)
 
     logger.info(
         "runtime_initialized environment=%s skills=%s schema=%s",
@@ -185,6 +196,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         personality=personality,
         planner=planner,
         agenda=agenda,
+        weather=weather,
         daily_summary=daily_summary,
         memory=memory,
         memory_repository=memory_repository,

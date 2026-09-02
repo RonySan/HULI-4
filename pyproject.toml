@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+voice = ["vosk==0.3.45", "sounddevice==0.5.3", "pocketsphinx>=5.1,<6"]
 dev = [
     "httpx2>=2.12,<3",
     "pytest>=9,<10",
@@ -25,6 +26,9 @@ dev = [
 where = ["."]
 include = ["huli*"]
 exclude = ["data*", "tests*", "tools*", "scripts*", "docs*"]
+
+[tool.setuptools.package-data]
+"huli.voice" = ["resources/*.kws"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -6,13 +6,8 @@ from dataclasses import dataclass
 import re
 
 from huli.memory.models import MemoryKind, MemorySensitivity
+from huli.security.privacy import contains_secret_text
 
-
-_SECRET_PATTERNS = (
-    re.compile(r"\b(?:senha|password|passcode)\b", re.IGNORECASE),
-    re.compile(r"\b(?:api[ _-]?key|token|secret|chave privada)\b", re.IGNORECASE),
-    re.compile(r"\bsk-[A-Za-z0-9_-]{12,}\b"),
-)
 
 _SENSITIVE_PATTERNS = (
     re.compile(r"\b(?:cpf|rg|documento pessoal)\b", re.IGNORECASE),
@@ -41,7 +36,7 @@ class MemoryPolicy:
 
     def classify_sensitivity(self, content: str) -> MemorySensitivity:
         text = str(content or "").strip()
-        if any(pattern.search(text) for pattern in _SECRET_PATTERNS):
+        if contains_secret_text(text):
             return MemorySensitivity.SECRET
         if any(pattern.search(text) for pattern in _SENSITIVE_PATTERNS):
             return MemorySensitivity.SENSITIVE

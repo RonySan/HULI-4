@@ -48,7 +48,10 @@ class PlannerSkill:
             return self._response(request, "\n".join(lines))
         if intent == "task.complete":
             target = extract_completion_target(request.text)
-            task = self.planner.complete_task(target)
+            try:
+                task = self.planner.complete_task(target, project=project)
+            except ValueError as exc:
+                return self._response(request, str(exc), ok=False)
             if task is None:
                 return self._response(request, "Não encontrei uma tarefa pendente com esse número ou descrição.", ok=False)
             return self._response(request, f"Tarefa #{task.id} concluída: {task.title}.")

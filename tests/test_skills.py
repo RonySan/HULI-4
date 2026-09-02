@@ -32,6 +32,15 @@ def test_registry_routes_known_request() -> None:
     assert response.ok is True
 
 
+def test_foundation_explains_capabilities_in_natural_language() -> None:
+    registry = build_registry()
+    request = KernelRequest.from_text("o que você sabe fazer até agora")
+    response = registry.handle(request)
+
+    assert response.handled_by == "foundation"
+    assert "ativação ‘Huli’" in response.text
+
+
 def test_registry_returns_controlled_fallback_for_unknown_request() -> None:
     registry = build_registry()
     request = KernelRequest.from_text("comando que ainda nao existe")

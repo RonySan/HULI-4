@@ -10,18 +10,27 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 _VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+APP_ROOT = Path(__file__).resolve().parents[2]
+
+
+def app_path(value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    return path.resolve() if path.is_absolute() else (APP_ROOT / path).resolve()
 
 
 @dataclass(frozen=True, slots=True)
 class Settings:
     environment: str = "development"
     log_level: str = "INFO"
-    data_dir: Path = Path("data")
+    data_dir: Path = APP_ROOT / "data"
     api_host: str = "127.0.0.1"
     api_port: int = 8765
     session_hours: int = 24 * 7
     max_input_chars: int = 10_000
     timezone: str = "America/Sao_Paulo"
+    weather_location: str = "São Paulo, São Paulo"
+    weather_latitude: float = -23.5505
+    weather_longitude: float = -46.6333
     context_turns: int = 20
     journal_lock_minutes: int = 15
     voice_auto_speak: bool = False
@@ -29,6 +38,12 @@ class Settings:
     voice_language: str = "pt-BR"
     voice_rate: int = 0
     voice_volume: int = 100
+    voice_input_provider: str = "auto"
+    voice_model_path: Path = APP_ROOT / "models" / "vosk-pt"
+    voice_input_device: str | int | None = None
+    voice_start_listening: bool = False
+    voice_wake_enabled: bool = False
+    voice_wake_cycle_timeout: int = 30
 
     @property
     def database_path(self) -> Path:
@@ -37,6 +52,10 @@ class Settings:
     @property
     def backup_dir(self) -> Path:
         return self.data_dir / "backups"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "data_dir", app_path(self.data_dir))
+        object.__setattr__(self, "voice_model_path", app_path(self.voice_model_path))
 
 
 def load_settings(source: Mapping[str, str] | None = None) -> Settings:
@@ -56,6 +75,15 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
     except ZoneInfoNotFoundError as exc:
         raise ValueError(f"HULI_TIMEZONE inválido: {timezone_name}.") from exc
     context_turns = _read_int(values, "HULI_CONTEXT_TURNS", 20, minimum=1, maximum=200)
+    weather_location = values.get(
+        "HULI_WEATHER_LOCATION", "São Paulo, São Paulo"
+    ).strip() or "São Paulo, São Paulo"
+    weather_latitude = _read_float(
+        values, "HULI_WEATHER_LATITUDE", -23.5505, minimum=-90, maximum=90
+    )
+    weather_longitude = _read_float(
+        values, "HULI_WEATHER_LONGITUDE", -46.6333, minimum=-180, maximum=180
+    )
     journal_lock_minutes = _read_int(
         values,
         "HULI_JOURNAL_LOCK_MINUTES",
@@ -76,6 +104,11 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         raise ValueError("HULI_VOICE_LANGUAGE deve usar um código como pt-BR.")
     voice_rate = _read_int(values, "HULI_VOICE_RATE", 0, minimum=-10, maximum=10)
     voice_volume = _read_int(values, "HULI_VOICE_VOLUME", 100, minimum=0, maximum=100)
+    voice_input_provider = values.get("HULI_VOICE_INPUT_PROVIDER", "auto").strip().lower()
+    if voice_input_provider not in {"auto", "vosk", "windows"}:
+        raise ValueError("HULI_VOICE_INPUT_PROVIDER deve ser auto, vosk ou windows.")
+    raw_device = values.get("HULI_VOICE_INPUT_DEVICE", "").strip()
+    voice_input_device = int(raw_device) if raw_device.isdigit() else raw_device or None
     return Settings(
         environment=environment,
         log_level=log_level,
@@ -85,6 +118,9 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         session_hours=session_hours,
         max_input_chars=max_input_chars,
         timezone=timezone_name,
+        weather_location=weather_location,
+        weather_latitude=weather_latitude,
+        weather_longitude=weather_longitude,
         context_turns=context_turns,
         journal_lock_minutes=journal_lock_minutes,
         voice_auto_speak=voice_auto_speak,
@@ -92,6 +128,18 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         voice_language=voice_language,
         voice_rate=voice_rate,
         voice_volume=voice_volume,
+        voice_input_provider=voice_input_provider,
+        voice_model_path=app_path(values.get("HULI_VOICE_MODEL_PATH", "models/vosk-pt")),
+        voice_input_device=voice_input_device,
+        voice_start_listening=_read_bool(values, "HULI_VOICE_START_LISTENING", False),
+        voice_wake_enabled=_read_bool(values, "HULI_VOICE_WAKE_ENABLED", False),
+        voice_wake_cycle_timeout=_read_int(
+            values,
+            "HULI_VOICE_WAKE_CYCLE_TIMEOUT",
+            30,
+            minimum=2,
+            maximum=120,
+        ),
     )
 
 
@@ -118,3 +166,23 @@ def _read_bool(values: Mapping[str, str], key: str, default: bool) -> bool:
     if normalized in {"0", "false", "nao", "não", "no", "off", "desligado"}:
         return False
     raise ValueError(f"{key} precisa ser true/false ou sim/não.")
+
+
+def _read_float(
+    values: Mapping[str, str],
+    key: str,
+    default: float,
+    *,
+    minimum: float,
+    maximum: float,
+) -> float:
+    raw = values.get(key)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = float(raw.replace(",", "."))
+    except ValueError as exc:
+        raise ValueError(f"{key} precisa ser um número.") from exc
+    if value < minimum or value > maximum:
+        raise ValueError(f"{key} precisa estar entre {minimum} e {maximum}.")
+    return value

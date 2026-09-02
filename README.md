@@ -135,7 +135,21 @@ criptografado, migradas em uma transação e removidas das páginas lógicas ant
 do SQLite. A chave aberta permanece apenas em memória e é bloqueada após 15
 minutos sem uso, no logout ou no encerramento do terminal.
 
-## Voz local — alpha.13
+## Correções locais e voz em português — 31/08/2026
+
+Esta instalação inclui correções de privacidade, sessão, busca de memória, agenda
+e voz offline. Consulte [instruções e limites](docs/CORRECOES_2026_08_31.md).
+
+- `INICIAR_HULI.bat`: iniciar pelo teclado.
+- `INICIAR_PAINEL.bat`: abrir o painel com botões de voz.
+- `INICIAR_COM_VOZ.bat`: falar e ouvir depois do login.
+- `TESTAR_VOZ.bat`: teste real sem executar comandos nem acessar dados pessoais.
+- `INSTALAR_VOZ_LOCAL.bat`: dependências opcionais e modelo português oficial.
+
+A escuta usa Vosk local quando configurado. A fala continua usando a voz pt-BR
+instalada no Windows. A configuração distingue fala, escuta e teste acústico.
+
+## Voz local — fundação original alpha.13
 
 A primeira fundação de voz usa `System.Speech`, já presente no Windows, e não
 envia áudio nem transcrições a serviços externos. Ela funciona depois do login e
@@ -187,6 +201,62 @@ O CI executa em Linux e Windows nas branches `phase-*` e em `main`.
 ```powershell
 python main.py
 ```
+
+## Abrir o painel
+
+```powershell
+.\INICIAR_PAINEL.bat
+```
+
+O painel possui os botões **Ouvir agora** e **Escuta contínua**. Depois de ligar
+a escuta contínua, diga `Huli, que horas são?`. A fala é processada localmente;
+ao começar a digitar, a ativação pausa para dar prioridade ao teclado.
+
+O botão **Calibrar nome** pede cinco pronúncias isoladas de `Huli`. Um detector
+fonético local procura somente os sons de `Huli/Ruli`; ele não transforma
+`olhe`, `link`, `ruim` ou `único` no nome. O áudio não é salvo. A calibração
+vale tanto para o painel quanto para `INICIAR_COM_VOZ.bat`.
+
+Para falar e digitar na mesma sessão, use:
+
+```powershell
+.\INICIAR_COM_VOZ.bat
+```
+
+Depois do login, a Huli aguarda o som de `Huli/Ruli` em segundo plano, sem
+depender da transcrição do Vosk. Diga `Huli`, espere `Estou ouvindo` e então
+fale o comando. Ao começar a digitar, o teclado tem prioridade e a captura
+atual é cancelada.
+
+Use `pausar ativação` ou `privacidade` para parar a escuta e `ativar Huli` para
+retomá-la. O áudio é processado localmente em memória e não é salvo. O modo
+sem microfone continua disponível em `.\INICIAR_HULI.bat`.
+
+## Despertador e resumo matinal
+
+`CONFIGURAR_DESPERTADOR.bat` registra no Windows o despertador diário das
+05:50. Ele usa uma melodia local gratuita, oferece soneca de 10 minutos e pode
+abrir o painel com fala e escuta contínua preparadas após o login.
+
+Ao dizer `Huli, bom dia`, o proprietário ouve a hora, somente os compromissos
+do dia, o clima de São Paulo e uma sugestão curta de roupa. Sem internet, hora e
+agenda continuam funcionando. O clima usa Open-Meteo e não exige chave.
+
+Para testar o despertador imediatamente:
+
+```powershell
+.\TESTAR_DESPERTADOR.bat
+```
+
+Para trocar a melodia por um arquivo WAV local:
+
+```powershell
+.\CONFIGURAR_DESPERTADOR.bat -AudioPath "C:\Musicas\despertador.wav"
+```
+
+Consultas são executadas imediatamente. Comandos de voz que alteram dados ou
+acessam o diário ficam pendentes por 30 segundos e só prosseguem quando o dono
+digita `confirmar voz`; a confirmação também passa pelas permissões normais.
 
 A senha do proprietário é opcional. Usuários desconhecidos podem entrar em modo visitante com permissões limitadas.
 O restante da Huli continua aceitando proprietário sem senha, mas o diário fica

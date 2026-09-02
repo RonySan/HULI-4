@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import platform
+import json
+from pathlib import Path
 import shutil
 import subprocess
 from typing import Callable, Protocol
@@ -19,6 +21,10 @@ class VoiceUnavailableError(VoiceError):
 
 class VoiceTimeoutError(VoiceError):
     """Nenhuma fala foi reconhecida no tempo configurado."""
+
+
+class VoiceCancelledError(VoiceError):
+    """A escuta foi interrompida localmente antes de produzir um comando."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,19 +50,24 @@ class WindowsSpeechBackend:
     """Usa System.Speech localmente; o texto nunca é interpolado no script."""
 
     _SPEAK_SCRIPT = r"""
+$ErrorActionPreference = 'Stop'
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 Add-Type -AssemblyName System.Speech
 $text = [Console]::In.ReadToEnd()
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $voice = $synth.GetInstalledVoices() |
     Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -eq $env:HULI_SPEECH_LANGUAGE } |
     Select-Object -First 1
-if ($null -ne $voice) { $synth.SelectVoice($voice.VoiceInfo.Name) }
+if ($null -eq $voice) { throw 'Nenhuma voz instalada para o idioma solicitado.' }
+$synth.SelectVoice($voice.VoiceInfo.Name)
 $synth.Rate = [int]$env:HULI_SPEECH_RATE
 $synth.Volume = [int]$env:HULI_SPEECH_VOLUME
-$synth.Speak($text)
+try { $synth.Speak($text) } finally { $synth.Dispose() }
 """.strip()
 
     _LISTEN_SCRIPT = r"""
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Speech
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $installed = [System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers()
@@ -85,25 +96,53 @@ if ($null -eq $result -or [string]::IsNullOrWhiteSpace($result.Text)) { exit 3 }
 [Console]::Write($result.Text)
 """.strip()
 
+    _PROBE_SCRIPT = r"""
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+Add-Type -AssemblyName System.Speech
+$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
+try {
+    $outputVoices = @($synth.GetInstalledVoices() | Where-Object {
+        $_.Enabled -and $_.VoiceInfo.Culture.Name -eq $env:HULI_SPEECH_LANGUAGE
+    })
+    $inputEngines = @([System.Speech.Recognition.SpeechRecognitionEngine]::InstalledRecognizers() | Where-Object {
+        $_.Culture.Name -eq $env:HULI_SPEECH_LANGUAGE
+    })
+    @{output_available=($outputVoices.Count -gt 0); input_available=($inputEngines.Count -gt 0)} | ConvertTo-Json -Compress
+} finally { $synth.Dispose() }
+""".strip()
+
     def __init__(
         self,
         *,
         executable: str | None = None,
         platform_name: str | None = None,
         runner: Runner = subprocess.run,
+        language: str = "pt-BR",
     ) -> None:
         self.platform_name = platform_name or platform.system()
         self.executable = executable or shutil.which("powershell") or shutil.which("pwsh")
         self._runner = runner
+        self.language = language
+        self._capabilities: VoiceCapabilities | None = None
 
     def capabilities(self) -> VoiceCapabilities:
-        available = self.platform_name == "Windows" and bool(self.executable)
-        detail = (
-            "Microsoft System.Speech local"
-            if available
-            else "A voz local desta versão requer Windows e PowerShell."
-        )
-        return VoiceCapabilities(available, available, "windows-system-speech", detail)
+        if self._capabilities is not None:
+            return self._capabilities
+        if self.platform_name != "Windows" or not self.executable:
+            return VoiceCapabilities(False, False, "windows-system-speech", "Requer Windows e PowerShell.")
+        try:
+            result = self._run(self._PROBE_SCRIPT, environment={"HULI_SPEECH_LANGUAGE": self.language}, timeout=15)
+            if result.returncode != 0:
+                raise VoiceUnavailableError(self._failure_message(result, "Falha ao consultar System.Speech."))
+            info = json.loads(result.stdout.lstrip("\ufeff"))
+            output = info.get("output_available") is True
+            input_ = info.get("input_available") is True
+            detail = f"Fala {self.language}: {'disponível' if output else 'ausente'}; reconhecimento Windows: {'disponível' if input_ else 'ausente'}."
+            self._capabilities = VoiceCapabilities(output, input_, "windows-system-speech", detail)
+        except (VoiceError, ValueError, AttributeError) as exc:
+            return VoiceCapabilities(False, False, "windows-system-speech", f"Não consegui verificar os motores de voz: {exc}")
+        return self._capabilities
 
     def speak(self, text: str, *, language: str, rate: int, volume: int) -> None:
         self._ensure_available()
@@ -150,8 +189,8 @@ if ($null -eq $result -or [string]::IsNullOrWhiteSpace($result.Text)) { exit 3 }
         return recognized
 
     def _ensure_available(self) -> None:
-        if not self.capabilities().output_available:
-            raise VoiceUnavailableError(self.capabilities().detail)
+        if self.platform_name != "Windows" or not self.executable:
+            raise VoiceUnavailableError("A voz do Windows requer Windows e PowerShell.")
 
     def _run(
         self,
@@ -178,10 +217,13 @@ if ($null -eq $result -or [string]::IsNullOrWhiteSpace($result.Text)) { exit 3 }
                 ],
                 input=input_text,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout,
                 env=env,
                 check=False,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except subprocess.TimeoutExpired as exc:
             raise VoiceTimeoutError("O mecanismo de voz excedeu o tempo de resposta.") from exc
@@ -220,9 +262,15 @@ class VoiceService:
         input_timeout: int = 8,
         rate: int = 0,
         volume: int = 100,
+        input_provider: str = "auto",
+        model_path: Path | None = None,
+        input_device: str | int | None = None,
     ) -> VoiceService:
+        from huli.voice.local import LocalVoiceBackend
+
         return cls(
-            WindowsSpeechBackend(),
+            LocalVoiceBackend(language=language, input_provider=input_provider,
+                              model_path=model_path, input_device=input_device),
             language=language,
             input_timeout=input_timeout,
             rate=rate,
@@ -240,8 +288,49 @@ class VoiceService:
             volume=self.volume,
         )
 
-    def listen_once(self) -> str:
-        return self.backend.listen_once(
-            language=self.language,
-            timeout=self.input_timeout,
-        )
+    def listen_once(self, *, timeout: int | None = None, cancel_event=None) -> str:
+        resolved_timeout = timeout or self.input_timeout
+        if cancel_event is not None:
+            cancelable = getattr(self.backend, "listen_cancelable", None)
+            if cancelable is not None:
+                return cancelable(
+                    language=self.language,
+                    timeout=resolved_timeout,
+                    cancel_event=cancel_event,
+                )
+        return self.backend.listen_once(language=self.language, timeout=resolved_timeout)
+
+    def listen_wake_once(
+        self,
+        *,
+        timeout: int,
+        cancel_event=None,
+        aliases: tuple[str, ...] = (),
+    ) -> str:
+        """Obtém a transcrição bruta usada somente pelo detector de ativação."""
+        listener = getattr(self.backend, "listen_wake_once", None)
+        if listener is not None:
+            return listener(
+                language=self.language,
+                timeout=timeout,
+                cancel_event=cancel_event,
+                aliases=aliases,
+            )
+        return self.listen_once(timeout=timeout, cancel_event=cancel_event)
+
+    def listen_calibration_once(self, *, timeout: int, cancel_event=None) -> str:
+        """Valida uma amostra fonética não executável do nome."""
+        listener = getattr(self.backend, "listen_calibration_once", None)
+        if listener is not None:
+            return listener(
+                language=self.language,
+                timeout=timeout,
+                cancel_event=cancel_event,
+            )
+        return self.listen_once(timeout=timeout, cancel_event=cancel_event)
+
+    def prepare_input(self) -> None:
+        """Carrega recursos antes de avisar que o usuário já pode falar."""
+        prepare = getattr(self.backend, "prepare_input", None)
+        if prepare is not None:
+            prepare()

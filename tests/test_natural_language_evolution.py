@@ -203,7 +203,7 @@ def test_automatic_project_note_cannot_store_a_secret(tmp_path: Path) -> None:
         metadata=meta,
     )
 
-    assert response.handled_by == "project-context"
+    assert response.handled_by == "privacy"
     assert not response.ok
     assert "não armazena senhas" in response.text.casefold()
     assert runtime.memory_repository.count_active("rony") == 0

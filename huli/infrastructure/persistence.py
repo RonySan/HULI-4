@@ -8,7 +8,7 @@ import json
 
 from huli.core.events import Event, EventBus
 from huli.infrastructure.database import SQLiteDatabase
-from huli.security.privacy import PRIVATE_JOURNAL_REDACTION, is_private_journal_text
+from huli.security.privacy import PRIVATE_JOURNAL_REDACTION, redact_private_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,18 +109,19 @@ class RuntimeRecorder:
     def _on_request(self, event: Event) -> None:
         request_id = str(event.payload.get("request_id", ""))
         text = str(event.payload.get("text", ""))
-        is_private = is_private_journal_text(text)
+        protected = redact_private_text(text)
+        is_private = protected != text
         self._event_repository.add(
             self._redact_event(event) if is_private else event
         )
         if request_id:
-            self._pending[request_id] = (text, is_private)
+            self._pending[request_id] = (protected, is_private)
 
     def _on_response(self, event: Event) -> None:
         request_id = str(event.payload.get("request_id", ""))
         user_text, request_is_private = self._pending.pop(request_id, ("", False))
         response_text = str(event.payload.get("text", ""))
-        is_private = request_is_private or is_private_journal_text(response_text)
+        is_private = request_is_private or redact_private_text(response_text) != response_text
         self._event_repository.add(
             self._redact_event(event) if is_private else event
         )

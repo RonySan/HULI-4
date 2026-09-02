@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import re
 
 from huli.brain.agenda import AgendaService
 from huli.core.contracts import KernelRequest, KernelResponse
@@ -38,31 +39,25 @@ class AgendaSkill:
             return self._response(request, f"Compromisso #{item.id} agendado{project_label} para {local.strftime('%d/%m/%Y às %H:%M')}: {item.title}.")
         if intent == "agenda.query":
             normalized = normalize(request.text)
+            words = set(re.findall(r"\w+", normalized))
             reference = self.agenda.now()
-            if "amanha" in normalized:
-                items = self.agenda.on_date(reference.date() + timedelta(days=1))
-                empty_message = "Não há compromissos para amanhã."
-                heading = "Compromissos de amanhã:"
-            elif "noite" in normalized:
-                items = tuple(
-                    item
-                    for item in self.agenda.today(reference)
-                    if datetime.fromisoformat(item.start_at).astimezone(
-                        self.agenda.timezone
-                    ).hour
-                    >= 18
-                )
-                empty_message = "Não há compromissos para esta noite."
-                heading = "Compromissos desta noite:"
-            elif "hoje" in normalized or normalized in {
+            period = next((word for word in ("manha", "tarde", "noite") if word in words), None)
+            if "amanha" in normalized or "hoje" in normalized or period or normalized in {
                 "agenda",
                 "agendas",
                 "minha agenda",
                 "nossa agenda",
             }:
-                items = self.agenda.today(reference)
-                empty_message = "Não há compromissos para hoje."
-                heading = "Compromissos de hoje:"
+                tomorrow = "amanha" in words
+                day = reference.date() + timedelta(days=1 if tomorrow else 0)
+                label = "amanhã" if tomorrow else "hoje"
+                items = self.agenda.on_date(day)
+                if period:
+                    start, end, period_label = {"manha": (0, 12, "de manhã"), "tarde": (12, 18, "à tarde"), "noite": (18, 24, "à noite")}[period]
+                    items = tuple(item for item in items if start <= datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone).hour < end)
+                    label += f" {period_label}"
+                empty_message = f"Não há compromissos para {label}."
+                heading = f"Compromissos de {label}:"
             else:
                 items = self.agenda.upcoming(reference, limit=10)
                 empty_message = "Não há próximos compromissos."
@@ -70,13 +65,18 @@ class AgendaSkill:
             if not items:
                 return self._response(request, empty_message)
             lines = [heading]
+            if "trabalho" in words:
+                lines.append("Agenda local; não há separação por calendário de trabalho nesta versão.")
             for item in items:
                 local = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
                 lines.append(f"- #{item.id} {local.strftime('%d/%m %H:%M')} — {item.title}")
             return self._response(request, "\n".join(lines))
         if intent == "agenda.cancel":
             target = extract_cancel_target(request.text)
-            item = self.agenda.cancel(target)
+            try:
+                item = self.agenda.cancel(target)
+            except ValueError as exc:
+                return self._response(request, str(exc), ok=False)
             if item is None:
                 return self._response(request, "Não encontrei um compromisso ativo com esse número ou descrição.", ok=False)
             return self._response(request, f"Compromisso #{item.id} cancelado: {item.title}.")

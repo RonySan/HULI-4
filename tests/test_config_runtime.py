@@ -17,6 +17,9 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_API_PORT": "9000",
             "HULI_SESSION_HOURS": "12",
             "HULI_MAX_INPUT_CHARS": "2000",
+            "HULI_WEATHER_LOCATION": "Campinas, São Paulo",
+            "HULI_WEATHER_LATITUDE": "-22,90",
+            "HULI_WEATHER_LONGITUDE": "-47.06",
             "HULI_JOURNAL_LOCK_MINUTES": "7",
             "HULI_VOICE_AUTO_SPEAK": "sim",
             "HULI_VOICE_INPUT_TIMEOUT": "12",
@@ -33,6 +36,9 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.api_port == 9000
     assert settings.session_hours == 12
     assert settings.max_input_chars == 2000
+    assert settings.weather_location == "Campinas, São Paulo"
+    assert settings.weather_latitude == -22.90
+    assert settings.weather_longitude == -47.06
     assert settings.journal_lock_minutes == 7
     assert settings.voice_auto_speak is True
     assert settings.voice_input_timeout == 12
@@ -60,3 +66,8 @@ def test_load_settings_rejects_invalid_voice_values() -> None:
         load_settings({"HULI_VOICE_AUTO_SPEAK": "talvez"})
     with pytest.raises(ValueError, match="HULI_VOICE_LANGUAGE"):
         load_settings({"HULI_VOICE_LANGUAGE": "português brasileiro"})
+
+
+def test_load_settings_rejects_invalid_weather_coordinates() -> None:
+    with pytest.raises(ValueError, match="HULI_WEATHER_LATITUDE"):
+        load_settings({"HULI_WEATHER_LATITUDE": "120"})

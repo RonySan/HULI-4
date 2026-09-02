@@ -25,6 +25,7 @@ class PersonalityEngine:
         "knowledge.",
         "memory.",
         "daily.",
+        "morning.",
     )
     _RISK_INTENTS = {
         "memory.forget",
@@ -176,11 +177,12 @@ class PersonalityEngine:
         if (
             "como voce esta" in normalized
             or "como vc ta" in normalized
+            or re.fullmatch(r"(?:huli )?como (?:vai|esta|ta)(?: voce|vc)?(?: huli)?", normalized)
             or "tudo bem" in normalized
         ):
             if mode is ConversationMode.PROFESSIONAL:
-                return f"Estou operacional{suffix}. Podemos seguir com o trabalho."
-            return f"Estou funcionando normalmente{suffix}. Continuo por aqui."
+                return f"Pronta para ajudar{suffix}. Podemos seguir com o trabalho."
+            return f"Estou por aqui{suffix}. Como está seu dia?"
 
         if is_followup:
             if normalized in {"e voce", "e vc"}:

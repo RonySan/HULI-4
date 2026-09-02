@@ -8,5 +8,6 @@ from huli.brain.intent import IntentEngine, IntentMatch, IntentName
 from huli.brain.intent_events import IntentObserver
 from huli.brain.normalization import normalize_text
 from huli.brain.planner import PlannerService
+from huli.brain.weather import OpenMeteoWeatherService, WeatherError, WeatherSnapshot
 
-__all__ = ["AgendaService", "BrainDispatcher", "ContextEngine", "ContextSnapshot", "ContextTurn", "DailySummaryService", "IntentEngine", "IntentMatch", "IntentName", "IntentObserver", "PlannerService", "normalize_text"]
+__all__ = ["AgendaService", "BrainDispatcher", "ContextEngine", "ContextSnapshot", "ContextTurn", "DailySummaryService", "IntentEngine", "IntentMatch", "IntentName", "IntentObserver", "OpenMeteoWeatherService", "PlannerService", "WeatherError", "WeatherSnapshot", "normalize_text"]

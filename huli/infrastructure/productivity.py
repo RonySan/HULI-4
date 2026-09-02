@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import unicodedata
 
 from huli.infrastructure.database import SQLiteDatabase
+
+
+def _description_key(text: str) -> str:
+    return " ".join("".join(char for char in unicodedata.normalize("NFKD", text.casefold()) if not unicodedata.combining(char)).split())
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +69,7 @@ class TaskRepository:
             rows = connection.execute(query, tuple(args)).fetchall()
         return tuple(self._from_row(row) for row in rows)
 
-    def complete(self, identifier: str) -> TaskRecord | None:
+    def complete(self, identifier: str, *, project: str | None = None) -> TaskRecord | None:
         normalized = " ".join(str(identifier or "").split()).strip()
         if not normalized:
             return None
@@ -72,10 +77,12 @@ class TaskRepository:
             if normalized.isdigit():
                 row = connection.execute("SELECT * FROM tasks WHERE id = ? AND status = 'pending'", (int(normalized),)).fetchone()
             else:
-                row = connection.execute(
-                    "SELECT * FROM tasks WHERE status = 'pending' AND title LIKE ? COLLATE NOCASE ORDER BY id ASC LIMIT 1",
-                    (f"%{normalized}%",),
-                ).fetchone()
+                candidates = connection.execute("SELECT * FROM tasks WHERE status = 'pending' ORDER BY id ASC").fetchall()
+                matches = [item for item in candidates if _description_key(normalized) in _description_key(str(item["title"]))
+                           and (not project or _description_key(str(item["project"] or "")) == _description_key(project))]
+                if len(matches) > 1:
+                    raise ValueError("Encontrei mais de uma tarefa. Informe o número: " + ", ".join(f"#{item['id']} {item['title']}" for item in matches[:5]))
+                row = matches[0] if matches else None
             if row is None:
                 return None
             connection.execute("UPDATE tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?", (int(row["id"]),))
@@ -147,10 +154,11 @@ class AppointmentRepository:
             if normalized.isdigit():
                 row = connection.execute("SELECT * FROM appointments WHERE id = ? AND status = 'scheduled'", (int(normalized),)).fetchone()
             else:
-                row = connection.execute(
-                    "SELECT * FROM appointments WHERE status = 'scheduled' AND title LIKE ? COLLATE NOCASE ORDER BY start_at ASC LIMIT 1",
-                    (f"%{normalized}%",),
-                ).fetchone()
+                candidates = connection.execute("SELECT * FROM appointments WHERE status = 'scheduled' ORDER BY start_at ASC").fetchall()
+                matches = [item for item in candidates if _description_key(normalized) in _description_key(str(item["title"]))]
+                if len(matches) > 1:
+                    raise ValueError("Encontrei mais de um compromisso. Informe o número: " + ", ".join(f"#{item['id']} {item['title']}" for item in matches[:5]))
+                row = matches[0] if matches else None
             if row is None:
                 return None
             connection.execute("UPDATE appointments SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP WHERE id = ?", (int(row["id"]),))

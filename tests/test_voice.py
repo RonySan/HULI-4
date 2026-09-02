@@ -32,15 +32,22 @@ class FakeBackend:
         assert timeout == 8
         return "o que temos na agenda"
 
+    def listen_calibration_once(self, *, language: str, timeout: int, cancel_event=None) -> str:
+        assert language == "pt-BR"
+        assert timeout == 5
+        return "ruli"
+
 
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
         ("voz", VoiceCommand.STATUS),
         ("ativar voz", VoiceCommand.ENABLE),
+        ("ativar a voz", VoiceCommand.ENABLE),
         ("desligar voz", VoiceCommand.DISABLE),
         ("ouvir", VoiceCommand.LISTEN),
         ("modo voz", VoiceCommand.CONTINUOUS),
+        ("escuta contínua", VoiceCommand.CONTINUOUS),
         ("parar voz", VoiceCommand.STOP),
         ("o que temos na agenda", VoiceCommand.NONE),
     ],
@@ -57,6 +64,12 @@ def test_voice_service_delegates_without_network() -> None:
 
     assert service.listen_once() == "o que temos na agenda"
     assert backend.spoken == [("Agenda vazia.", "pt-BR", 2, 85)]
+
+
+def test_calibration_transcription_is_a_separate_non_command_operation() -> None:
+    service = VoiceService(FakeBackend(), language="pt-BR")
+
+    assert service.listen_calibration_once(timeout=5) == "ruli"
 
 
 def test_private_journal_response_is_never_spoken_automatically() -> None:

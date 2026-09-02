@@ -12,21 +12,25 @@ if (-not (Test-Path $python)) {
 
 Push-Location (Join-Path $PSScriptRoot "..")
 try {
-    Write-Host "[1/4] Instalando dependencias..."
-    & $python -m pip install -e ".[dev]"
-
-    Write-Host "[2/4] Ruff..."
+    Write-Host "[1/4] Ruff..."
     & $python -m ruff check .
+    if ($LASTEXITCODE -ne 0) { throw "Ruff falhou." }
 
-    Write-Host "[3/4] Testes completos..."
+    Write-Host "[2/4] Testes completos..."
     & $python -m pytest
+    if ($LASTEXITCODE -ne 0) { throw "Testes falharam." }
 
-    Write-Host "[4/4] Validacao da voz e agenda natural..."
+    Write-Host "[3/4] Validacao logica da voz e agenda natural..."
     & $python tools/validate_voice.py
+    if ($LASTEXITCODE -ne 0) { throw "Validacao logica falhou." }
+    Write-Host "[4/4] Motores e microfone configurado..."
+    & $python -m tools.diagnose_voice
+    if ($LASTEXITCODE -ne 0) { throw "Configuracao real de voz incompleta." }
 
     Write-Host ""
     Write-Host "=========================================="
-    Write-Host " VOZ LOCAL APROVADA NESTE COMPUTADOR"
+    Write-Host " TESTES E CONFIGURACAO DE VOZ VERIFICADOS"
+    Write-Host " Execute TESTAR_VOZ.bat para confirmar fala e escuta reais."
     Write-Host "=========================================="
 }
 finally {

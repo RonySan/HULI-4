@@ -14,6 +14,7 @@ class IntentName(StrEnum):
     SYSTEM_STATUS = "system.status"
     TIME_QUERY = "time.query"
     DATE_QUERY = "date.query"
+    MORNING_BRIEFING = "morning.briefing"
     AGENDA_QUERY = "agenda.query"
     AGENDA_CREATE = "agenda.create"
     AGENDA_CANCEL = "agenda.cancel"
@@ -215,6 +216,12 @@ class IntentEngine:
                 "task-list",
             ),
             _IntentRule(
+                IntentName.TASK_COMPLETE,
+                re.compile(r"^(?!.*\b(?:nao|nunca|ainda|se|talvez)\b).{3,}?\s+(?:verificad[oa]|concluid[oa]|finalizad[oa]|resolvid[oa])(?:\s+huli)?$"),
+                0.96,
+                "task-complete-natural",
+            ),
+            _IntentRule(
                 IntentName.TASK_CREATE,
                 re.compile(
                     r"^(?:adiciona|adicionar|adicione|cria|criar|crie|anota|anotar|anote|registre|registrar)\b.*\b(?:tarefa|lembrete)\b|^(?:nova|criar uma|adicionar uma)\s+tarefa\b|^(?:precisamos|preciso|tenho que|temos que)\s+\w+"
@@ -249,7 +256,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_QUERY,
                 re.compile(
-                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:de )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:hoje|amanha)\b"
+                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:(?:de|para|pra) )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:(?:para|pra) )?(?:hoje|amanha)\b"
                 ),
                 0.96,
                 "agenda-query",
@@ -279,6 +286,12 @@ class IntentEngine:
                 "date-query",
             ),
             _IntentRule(
+                IntentName.MORNING_BRIEFING,
+                re.compile(r"^bom dia(?: huli)?$"),
+                0.995,
+                "morning-briefing",
+            ),
+            _IntentRule(
                 IntentName.SMALL_TALK,
                 re.compile(
                     r"^(?:(?:oi|ola|opa|e ai)(?: huli)?(?: bom dia| boa tarde| boa noite)?|(?:bom dia|boa tarde|boa noite)(?: huli)?|(?:como (?:voce|vc) (?:esta|ta)|tudo bem)(?: huli)?|(?:quem e voce|quem e a huli)(?: huli)?|(?:obrigado|obrigada|valeu|agradecido|agradecida)(?: huli)?|(?:tchau|ate logo|ate mais)(?: huli)?|(?:(?:ok|certo|beleza) )?(?:entao )?(?:vamos (?:comecar|iniciar)(?: os)? trabalhos(?: de hoje)?|vamos trabalhar|podemos comecar))$"
@@ -290,6 +303,8 @@ class IntentEngine:
 
     def classify(self, text: str) -> IntentMatch:
         normalized = normalize_text(text)
+        normalized = re.sub(r"\bminah\b", "minha", normalized)
+        normalized = re.sub(r"\bpar ahoje\b", "para hoje", normalized)
         if not normalized:
             return IntentMatch(
                 IntentName.UNKNOWN,
@@ -298,7 +313,13 @@ class IntentEngine:
                 {"matched_rule": "empty"},
             )
         normalized = re.sub(r"^huli\s+", "", normalized).strip()
+        if re.fullmatch(r"como (?:vai|esta|ta)(?: voce|vc)?(?: huli)?", normalized):
+            return IntentMatch(IntentName.SMALL_TALK, 0.97, normalized, {"matched_rule": "social-how-are-you"})
+        if re.search(r"\bo que (?:eu )?(?:tenho|temos) (?:pra|para) (?:hoje|amanha|esta tarde|essa tarde)\b", normalized):
+            return IntentMatch(IntentName.AGENDA_QUERY, 0.97, normalized, {"matched_rule": "natural-agenda-period"})
         for rule in self._rules:
+            if rule.name == "task-complete-natural" and "?" in text:
+                continue
             match = rule.pattern.search(normalized)
             if match:
                 metadata = {"matched_rule": rule.name}

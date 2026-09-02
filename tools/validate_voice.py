@@ -8,7 +8,14 @@ from tempfile import TemporaryDirectory
 from huli import __version__
 from huli.bootstrap import build_runtime
 from huli.infrastructure import Settings
-from huli.voice import VoiceCapabilities, VoiceCommand, VoiceService, VoiceSession, parse_voice_command
+from huli.voice import (
+    VoiceCapabilities,
+    VoiceCommand,
+    VoiceService,
+    VoiceSession,
+    extract_wake_command,
+    parse_voice_command,
+)
 
 
 class ValidationBackend:
@@ -41,6 +48,14 @@ def run_validation() -> None:
     session = VoiceSession(voice, auto_speak=True)
 
     require(parse_voice_command("modo voz") is VoiceCommand.CONTINUOUS, "Comando de modo voz falhou.")
+    require(
+        extract_wake_command("ruli que horas são") == "que horas são",
+        "Ativação local não reconheceu o nome real.",
+    )
+    require(
+        extract_wake_command("olhe que horas são") is None,
+        "Uma palavra comum foi confundida com o nome Huli.",
+    )
     require(voice.listen_once() == "o que temos na agenda", "Reconhecimento controlado falhou.")
     voice.speak("Voz validada.")
     require(backend.spoken == ["Voz validada."], "Síntese controlada falhou.")
@@ -59,7 +74,7 @@ def run_validation() -> None:
             response = runtime.kernel.process(command, metadata=meta)
             require(response.handled_by == "agenda", f"Agenda não reconheceu: {command}")
 
-    print("VOZ LOCAL: fundação e regressões de agenda validadas com sucesso.")
+    print("VOZ LOCAL: voz, ativacao e agenda simuladas aprovadas; hardware ainda nao testado.")
 
 
 def main() -> int:

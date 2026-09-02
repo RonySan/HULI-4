@@ -62,6 +62,8 @@ def extract_task_title(text: str) -> str:
 
 def extract_completion_target(text: str) -> str:
     value = strip_huli_prefix(text)
+    value = re.sub(r"\s+huli[.!?]*$", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s+(?:(?:foi|est[aá])\s+)?(?:verificad[oa]|conclu[ií]d[oa]|finalizad[oa]|resolvid[oa])[.!]*$", "", value, flags=re.IGNORECASE)
     value = re.sub(
         r"^(?:conclui|concluir|conclua|finaliza|finalizar|finalize|marque|marca)\s+",
         "",

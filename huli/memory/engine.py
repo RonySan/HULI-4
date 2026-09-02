@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import heapq
 import re
 import unicodedata
 
@@ -153,16 +154,11 @@ class MemoryEngine:
         if not normalized_query:
             return ()
         query_tokens = _tokens(normalized_query)
-        candidates = self.repository.list_active(owner, project=project, limit=200)
-        scored: list[tuple[float, MemoryRecord]] = []
-
-        for memory in candidates:
-            score = self._score(memory, normalized_query, query_tokens)
-            if score > 0:
-                scored.append((score, memory))
-
-        scored.sort(key=lambda item: (item[0], item[1].updated_at), reverse=True)
-        matches = tuple(memory for _score, memory in scored[: max(1, min(limit, 20))])
+        candidates = self.repository.iter_active(owner, project=project)
+        scored = ((self._score(memory, normalized_query, query_tokens), memory) for memory in candidates)
+        best = heapq.nlargest(max(1, min(limit, 20)), (item for item in scored if item[0] > 0),
+                             key=lambda item: (item[0], item[1].updated_at, item[1].id))
+        matches = tuple(memory for _score, memory in best)
         for memory in matches:
             self.repository.record_access(memory.id, owner)
 
@@ -203,7 +199,7 @@ class MemoryEngine:
                 raise LookupError("Essa memória já está inativa.")
         else:
             exact = normalize_memory_text(clean_target)
-            active = self.repository.list_active(owner, limit=200)
+            active = self.repository.iter_active(owner)
             exact_matches = [
                 memory
                 for memory in active

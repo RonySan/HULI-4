@@ -21,8 +21,8 @@ class PlannerService:
     def pending(self, *, project: str | None = None, limit: int = 20) -> tuple[TaskRecord, ...]:
         return self.repository.list_pending(project=project, limit=limit)
 
-    def complete_task(self, identifier: str) -> TaskRecord | None:
-        task = self.repository.complete(identifier)
+    def complete_task(self, identifier: str, *, project: str | None = None) -> TaskRecord | None:
+        task = self.repository.complete(identifier, project=project)
         if task is not None:
             self.events.publish("planner.task.completed", {"task_id": task.id, "title": task.title, "project": task.project})
         return task

@@ -6,7 +6,7 @@ conhece implementações concretas de Skills, memória, IA ou infraestrutura.
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Callable, Mapping
 
 from huli.core.contracts import KernelHandler, KernelRequest, KernelResponse
 from huli.core.events import EventBus
@@ -15,14 +15,21 @@ from huli.core.events import EventBus
 class Kernel:
     """Núcleo coordenador da Huli."""
 
-    def __init__(self, handler: KernelHandler | None = None, event_bus: EventBus | None = None) -> None:
+    def __init__(self, handler: KernelHandler | None = None, event_bus: EventBus | None = None,
+                 input_filter: Callable[[KernelRequest], tuple[KernelRequest, KernelResponse | None]] | None = None) -> None:
         self._handler = handler
         self._event_bus = event_bus
+        self._input_filter = input_filter
 
     def process(self, text: str, metadata: Mapping[str, object] | None = None) -> KernelResponse:
         request = KernelRequest.from_text(text, metadata=metadata)
+        rejection = None
+        if self._input_filter is not None:
+            request, rejection = self._input_filter(request)
         self._publish("kernel.request.received", {"request_id": request.request_id, "text": request.text, "metadata": dict(request.metadata)})
-        if self._handler is not None:
+        if rejection is not None:
+            response = rejection
+        elif self._handler is not None:
             response = self._handler.handle(request)
             if response.request_id != request.request_id:
                 raise RuntimeError("O handler retornou uma resposta com request_id inválido.")

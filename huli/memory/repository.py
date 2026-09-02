@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from collections.abc import Iterator
 import json
 import sqlite3
 
@@ -93,7 +94,8 @@ class MemoryRepository:
                         owner,
                     ),
                 )
-                return self.get(memory_id, owner), False
+                row = connection.execute("SELECT * FROM memories WHERE id = ?", (memory_id,)).fetchone()
+                return self._from_row(row), False
 
             cursor = connection.execute(
                 """
@@ -180,6 +182,20 @@ class MemoryRepository:
                 (now, int(memory_id), owner),
             )
         return self.get(memory_id, owner)
+
+    def iter_active(self, owner: str, *, project: str | None = None) -> Iterator[MemoryRecord]:
+        """Percorre todas as memórias autorizadas sem truncar a busca nas recentes."""
+        query = "SELECT * FROM memories WHERE owner = ? COLLATE NOCASE AND is_active = 1"
+        params: list[object] = [owner]
+        if project is not None:
+            query += " AND project = ? COLLATE NOCASE"
+            params.append(project)
+        query += " ORDER BY updated_at DESC, id DESC"
+        with self.database.connect() as connection:
+            cursor = connection.execute(query, params)
+            while rows := cursor.fetchmany(128):
+                for row in rows:
+                    yield self._from_row(row)
 
     def record_access(self, memory_id: int, owner: str) -> None:
         now = _now_iso()
