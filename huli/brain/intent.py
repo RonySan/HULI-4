@@ -42,6 +42,7 @@ class IntentName(StrEnum):
     MEMORY_FORGET = "memory.forget"
     KNOWLEDGE_DESCRIBE = "knowledge.describe"
     KNOWLEDGE_RELATION = "knowledge.relation"
+    APP_OPEN = "app.open"
     UNKNOWN = "unknown"
 
 
@@ -269,6 +270,14 @@ class IntentEngine:
                 ),
                 0.96,
                 "agenda-query",
+            ),
+            _IntentRule(
+                IntentName.APP_OPEN,
+                re.compile(
+                    r"^(?:abra|abre|abrir|inicie|iniciar|execute|executar|rode|rodar)\s+(?!(?:(?:o|a)\s+)?(?:link|site|pagina|arquivo|pasta|documento)\b)(?:(?:o|a)\s+)?(?:(?:programa|aplicativo|app)\s+)?\S.+$"
+                ),
+                0.98,
+                "app-open",
             ),
             _IntentRule(
                 IntentName.SYSTEM_STATUS,

@@ -18,6 +18,8 @@ from huli.brain import IntentEngine, IntentName, normalize_text
         ("agenda para amanhã união com alto às oito horas da manhã", IntentName.AGENDA_CREATE),
         ("pode concluir compromisso e hoje", IntentName.AGENDA_COMPLETE),
         ("pode realizar esse compromisso de hoje", IntentName.AGENDA_COMPLETE),
+        ("abrir o programa Google Chrome", IntentName.APP_OPEN),
+        ("Huli, abra a calculadora", IntentName.APP_OPEN),
         ("adiciona uma tarefa revisar o Medynx", IntentName.TASK_CREATE),
         ("criar uma tarefa atualizar servidor", IntentName.TASK_CREATE),
         ("oi Huli", IntentName.SMALL_TALK),
@@ -48,6 +50,11 @@ def test_unknown_is_controlled_and_does_not_guess() -> None:
     assert result.intent is IntentName.UNKNOWN
     assert result.confidence == 0.0
     assert result.metadata["matched_rule"] == "none"
+
+
+@pytest.mark.parametrize("text", ("abrir o link", "abrir o site", "abrir arquivo relatório"))
+def test_opening_non_app_content_is_not_treated_as_an_application(text: str) -> None:
+    assert IntentEngine().classify(text).intent is IntentName.UNKNOWN
 
 
 def test_heat_exchanger_does_not_trigger_time_or_other_false_positive() -> None:

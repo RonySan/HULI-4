@@ -42,7 +42,7 @@ def test_known_intent_without_skill_returns_controlled_message() -> None:
 
 def test_unknown_request_keeps_controlled_fallback() -> None:
     dispatcher, _events = build_dispatcher()
-    request = KernelRequest.from_text("abrir o chrome")
+    request = KernelRequest.from_text("misture azul com silêncio")
 
     response = dispatcher.handle(request)
 

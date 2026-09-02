@@ -1,6 +1,7 @@
 """Capacidades especializadas acionadas pelo núcleo da Huli."""
 
 from huli.skills.agenda_skill import AgendaSkill
+from huli.skills.application_skill import ApplicationSkill
 from huli.skills.base import Skill
 from huli.skills.conversation import ConversationSkill
 from huli.skills.daily_summary_skill import DailySummarySkill
@@ -17,6 +18,7 @@ from huli.skills.time_skill import TimeSkill
 
 __all__ = [
     "AgendaSkill",
+    "ApplicationSkill",
     "ConversationSkill",
     "DailySummarySkill",
     "DuplicateSkillError",

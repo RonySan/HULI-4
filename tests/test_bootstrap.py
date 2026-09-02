@@ -16,6 +16,7 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "time",
         "planner",
         "agenda",
+        "applications",
         "daily-summary",
         "morning-briefing",
         "smalltalk",

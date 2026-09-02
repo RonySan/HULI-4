@@ -16,6 +16,7 @@ from huli.brain import (
 )
 from huli.core import EventBus, Kernel
 from huli.infrastructure import (
+    ApplicationLauncher,
     AppointmentRepository,
     EventRepository,
     InteractionRepository,
@@ -48,6 +49,7 @@ from huli.security import AuthService, JournalVault, SecurityPolicy
 from huli.security.privacy import filter_private_input
 from huli.skills import (
     AgendaSkill,
+    ApplicationSkill,
     ConversationSkill,
     DailySummarySkill,
     FoundationSkill,
@@ -90,6 +92,7 @@ class HuliRuntime:
     interactions: InteractionRepository
     tasks: TaskRepository
     appointments: AppointmentRepository
+    applications: ApplicationLauncher
     auth: AuthService
     security: SecurityPolicy
 
@@ -119,6 +122,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
 
     tasks = TaskRepository(database)
     appointments = AppointmentRepository(database)
+    applications = ApplicationLauncher()
     planner = PlannerService(tasks, events)
     agenda = AgendaService(appointments, events, resolved_settings.timezone)
     weather = OpenMeteoWeatherService(
@@ -162,6 +166,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(TimeSkill(resolved_settings.timezone))
     skills.register(PlannerSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
+    skills.register(ApplicationSkill(applications))
     skills.register(DailySummarySkill(daily_summary))
     skills.register(MorningBriefingSkill(agenda, weather))
     skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
@@ -213,6 +218,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         interactions=interactions,
         tasks=tasks,
         appointments=appointments,
+        applications=applications,
         auth=auth,
         security=security,
     )

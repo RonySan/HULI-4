@@ -32,7 +32,7 @@ def test_phase1_brain_end_to_end(tmp_path: Path) -> None:
     assert summary.handled_by == "daily-summary"
     completed = runtime.kernel.process(f"concluir tarefa {stored[0].id}", metadata=meta)
     assert "concluída" in completed.text
-    unknown = runtime.kernel.process("abrir o chrome", metadata=meta)
+    unknown = runtime.kernel.process("misture azul com silêncio", metadata=meta)
     assert unknown.handled_by == "brain-dispatcher" and unknown.ok is False
 
 
