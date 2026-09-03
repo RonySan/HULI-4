@@ -21,9 +21,9 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.14`
+- **Versão:** `4.0.0-alpha.15`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
-- **Módulo atual:** voz contínua, agenda natural, proprietário local e aplicativos
+- **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
@@ -82,6 +82,12 @@ de domínio. OpenAI e Ollama continuam fora desta fase.
 - `agenda.cancel`
 - `agenda.complete`
 - `app.open`
+- `media.favorites`
+- `media.play`
+- `media.pause`
+- `media.stop`
+- `media.next`
+- `media.previous`
 - `task.create`
 - `task.list`
 - `task.complete`
@@ -116,6 +122,11 @@ duas frases que falharam na validação local.
 A `alpha.14` adiciona ganho digital configurável do microfone, horários falados
 em português, conclusão de compromissos, entrada local direta como Rony e
 abertura segura de programas instalados no Windows.
+
+A `alpha.15` corrige a transcrição observada “esporte pai” exclusivamente no
+contexto de abrir o Spotify, adiciona músicas favoritas e controles locais de
+reprodução. A captura após o chamado agora aguarda 12 segundos e usa um intervalo
+de rearme para reduzir chamados incompletos repetidos.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
@@ -285,6 +296,9 @@ agenda para amanhã reunião com Paulo às oito horas da manhã
 concluir compromisso de hoje
 abrir o Google Chrome
 Huli, abra a calculadora
+pode tocar as minhas favoritas
+pause a música
+próxima música
 ```
 
 A Huli procura programas no Menu Iniciar, no registro de aplicativos do Windows
