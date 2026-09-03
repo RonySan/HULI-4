@@ -37,8 +37,8 @@ class FoundationSkill:
             text = (
                 "Posso conversar, informar hora e data, consultar agenda e tarefas, "
                 "acompanhar projetos, memória e conhecimento, além do diário privado. "
-                "Também posso abrir programas instalados e ouvir pelo botão ou pela "
-                "ativação ‘Huli’."
+                "Também posso abrir programas, controlar músicas e ouvir pelo botão "
+                "ou pela ativação ‘Huli’."
             )
         else:
             text = "Huli ativa. Kernel e Skill Registry operacionais."

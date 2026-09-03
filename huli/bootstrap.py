@@ -24,6 +24,7 @@ from huli.infrastructure import (
     Settings,
     SQLiteDatabase,
     TaskRepository,
+    WindowsMediaController,
     configure_logging,
     load_settings,
 )
@@ -56,6 +57,7 @@ from huli.skills import (
     JournalSkill,
     KnowledgeSkill,
     MemorySkill,
+    MediaSkill,
     MorningBriefingSkill,
     PlannerSkill,
     ProjectContextSkill,
@@ -93,6 +95,7 @@ class HuliRuntime:
     tasks: TaskRepository
     appointments: AppointmentRepository
     applications: ApplicationLauncher
+    media: WindowsMediaController
     auth: AuthService
     security: SecurityPolicy
 
@@ -123,6 +126,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     tasks = TaskRepository(database)
     appointments = AppointmentRepository(database)
     applications = ApplicationLauncher()
+    media = WindowsMediaController()
     planner = PlannerService(tasks, events)
     agenda = AgendaService(appointments, events, resolved_settings.timezone)
     weather = OpenMeteoWeatherService(
@@ -167,6 +171,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(PlannerSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(ApplicationSkill(applications))
+    skills.register(MediaSkill(media))
     skills.register(DailySummarySkill(daily_summary))
     skills.register(MorningBriefingSkill(agenda, weather))
     skills.register(SmallTalkSkill(resolved_settings.timezone, personality=personality))
@@ -219,6 +224,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         tasks=tasks,
         appointments=appointments,
         applications=applications,
+        media=media,
         auth=auth,
         security=security,
     )

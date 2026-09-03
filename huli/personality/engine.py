@@ -27,6 +27,7 @@ class PersonalityEngine:
         "daily.",
         "morning.",
         "app.",
+        "media.",
     )
     _RISK_INTENTS = {
         "memory.forget",

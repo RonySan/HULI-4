@@ -43,6 +43,12 @@ class IntentName(StrEnum):
     KNOWLEDGE_DESCRIBE = "knowledge.describe"
     KNOWLEDGE_RELATION = "knowledge.relation"
     APP_OPEN = "app.open"
+    MEDIA_FAVORITES = "media.favorites"
+    MEDIA_PLAY = "media.play"
+    MEDIA_PAUSE = "media.pause"
+    MEDIA_STOP = "media.stop"
+    MEDIA_NEXT = "media.next"
+    MEDIA_PREVIOUS = "media.previous"
     UNKNOWN = "unknown"
 
 
@@ -278,6 +284,54 @@ class IntentEngine:
                 ),
                 0.98,
                 "app-open",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_FAVORITES,
+                re.compile(
+                    r"^(?:pode\s+)?(?:toca|tocar|toque|coloca|colocar|coloque)\s+(?:as\s+)?(?:minhas\s+)?(?:(?:musicas?|cancoes?)\s+)?(?:favoritas|curtidas)(?:\s+(?:do|no)\s+spotify)?$"
+                ),
+                0.995,
+                "media-favorites",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_NEXT,
+                re.compile(
+                    r"^(?:pode\s+)?(?:proxima(?:\s+musica)?|passe?\s+para\s+a\s+proxima|pular?\s+musica)$"
+                ),
+                0.99,
+                "media-next",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_PREVIOUS,
+                re.compile(
+                    r"^(?:pode\s+)?(?:musica\s+anterior|volte?\s+(?:a|para a)\s+musica\s+anterior)$"
+                ),
+                0.99,
+                "media-previous",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_PAUSE,
+                re.compile(
+                    r"^(?:pode\s+)?(?:pausa|pausar|pause)\s*(?:a\s+)?(?:musica|reproducao|spotify)?$"
+                ),
+                0.99,
+                "media-pause",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_STOP,
+                re.compile(
+                    r"^(?:pode\s+)?(?:pare|parar|encerre|encerrar)\s+(?:a\s+)?(?:musica|reproducao|spotify)$"
+                ),
+                0.99,
+                "media-stop",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_PLAY,
+                re.compile(
+                    r"^(?:pode\s+)?(?:toca|tocar|toque|continue|continuar|retome|retomar)\s*(?:a\s+)?(?:musica|reproducao|spotify)?$"
+                ),
+                0.99,
+                "media-play",
             ),
             _IntentRule(
                 IntentName.SYSTEM_STATUS,

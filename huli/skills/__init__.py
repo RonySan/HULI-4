@@ -9,6 +9,7 @@ from huli.skills.foundation import FoundationSkill
 from huli.skills.journal_skill import JournalSkill
 from huli.skills.knowledge_skill import KnowledgeSkill
 from huli.skills.memory_skill import MemorySkill
+from huli.skills.media_skill import MediaSkill
 from huli.skills.morning_skill import MorningBriefingSkill
 from huli.skills.planner_skill import PlannerSkill
 from huli.skills.project_context import ProjectContextSkill
@@ -26,6 +27,7 @@ __all__ = [
     "JournalSkill",
     "KnowledgeSkill",
     "MemorySkill",
+    "MediaSkill",
     "MorningBriefingSkill",
     "PlannerSkill",
     "ProjectContextSkill",
