@@ -32,6 +32,19 @@ def _application_key(value: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", plain).split())
 
 
+_CANONICAL_APPLICATION_NAMES = {
+    "spotify cli": "Spotify",
+}
+
+_SPOKEN_APPLICATION_ALIASES = {
+    "esporte pai": "spotify",
+    "esporte fai": "spotify",
+    "esportifai": "spotify",
+    "spot fai": "spotify",
+    "spot fire": "spotify",
+}
+
+
 class ApplicationLauncher:
     """Resolve nomes locais e abre somente alvos instalados conhecidos."""
 
@@ -112,6 +125,7 @@ class ApplicationLauncher:
             or not resolved.is_file()
         ):
             return
+        name = _CANONICAL_APPLICATION_NAMES.get(_application_key(name), name)
         key = _application_key(name)
         if key:
             found[(key, str(resolved).casefold())] = InstalledApplication(
@@ -131,7 +145,7 @@ class ApplicationLauncher:
             raise ApplicationLaunchError(
                 "Por segurança, informe apenas o nome de um programa instalado."
             )
-        return raw
+        return _SPOKEN_APPLICATION_ALIASES.get(_application_key(raw), raw)
 
     @staticmethod
     def _resolve(

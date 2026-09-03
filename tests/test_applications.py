@@ -12,12 +12,14 @@ from huli.skills.application_skill import ApplicationSkill, extract_application_
 def build_launcher(tmp_path: Path):
     chrome = tmp_path / "Google Chrome.lnk"
     calculator = tmp_path / "calc.exe"
+    spotify = tmp_path / "spotify_cli.exe"
     chrome.touch()
     calculator.touch()
+    spotify.touch()
     opened: list[str] = []
     launcher = ApplicationLauncher(
         start_menu_roots=(tmp_path,),
-        aliases={"calculadora": calculator},
+        aliases={"calculadora": calculator, "spotify_cli": spotify},
         opener=opened.append,
         platform_name="win32",
     )
@@ -30,6 +32,18 @@ def test_launcher_resolves_start_menu_and_safe_alias(tmp_path: Path) -> None:
     assert launcher.launch("chrome").target == chrome.resolve()
     assert launcher.launch("calculadora").target == calculator.resolve()
     assert opened == [str(chrome.resolve()), str(calculator.resolve())]
+
+
+def test_spoken_spotify_alias_resolves_only_inside_application_launcher(
+    tmp_path: Path,
+) -> None:
+    launcher, _chrome, _calculator, opened = build_launcher(tmp_path)
+
+    application = launcher.launch("esporte pai")
+
+    assert application.name == "Spotify"
+    assert application.target.name == "spotify_cli.exe"
+    assert opened == [str(application.target)]
 
 
 @pytest.mark.parametrize(
@@ -74,3 +88,4 @@ def test_application_skill_extracts_and_opens_by_name(tmp_path: Path) -> None:
     assert response.text == "Abrindo Google Chrome."
     assert opened == [str(chrome.resolve())]
     assert extract_application_name("Huli, abra o aplicativo Paint") == "Paint"
+    assert extract_application_name("abrir o esporte pai") == "esporte pai"

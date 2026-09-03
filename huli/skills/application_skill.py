@@ -23,6 +23,7 @@ def extract_application_name(text: str) -> str:
         value,
         flags=re.IGNORECASE,
     )
+    value = re.sub(r"^(?:o|a)\s+", "", value, flags=re.IGNORECASE)
     value = re.sub(r"\s+por\s+favor\s*$", "", value, flags=re.IGNORECASE)
     return " ".join(value.split()).strip(" .,!?")
 
