@@ -8,6 +8,7 @@ from queue import Empty, Full, Queue
 import re
 from threading import Event, Thread
 import time
+from typing import Callable
 
 from huli.brain.normalization import normalize_text
 from huli.voice.calibration import normalize_wake_alias
@@ -98,11 +99,14 @@ class WakeWordListener:
         command_timeout: int = 20,
         feedback: bool = False,
         aliases: tuple[str, ...] = (),
+        rearm_delay: float = 3.0,
+        rearm_waiter: Callable[[float], object] | None = None,
     ) -> None:
         self.service = service
         self.cycle_timeout = cycle_timeout
         self.command_timeout = command_timeout
         self.feedback = feedback
+        self.rearm_delay = max(0.0, float(rearm_delay))
         self.aliases = tuple(
             alias
             for raw in aliases
@@ -119,6 +123,7 @@ class WakeWordListener:
         self._idle.set()
         self._thread: Thread | None = None
         self._last_feedback = 0.0
+        self._rearm_waiter = rearm_waiter or self._stop.wait
 
     @property
     def enabled(self) -> bool:
@@ -254,6 +259,7 @@ class WakeWordListener:
                         WakeEventKind.STATUS,
                         "Huli: Ouvi o chamado, mas não recebi um comando completo.",
                     )
+                    self._rearm_waiter(self.rearm_delay)
             except VoiceUnavailableError as exc:
                 self._emit(WakeEventKind.ERROR, f"Huli: Ativação por voz indisponível: {exc}")
                 self._enabled.clear()
@@ -262,6 +268,6 @@ class WakeWordListener:
                 self._emit_feedback(
                     "Ouvi áudio, mas não entendi o chamado com segurança."
                 )
-                self._stop.wait(0.2)
+                self._rearm_waiter(self.rearm_delay if activated else 0.2)
             finally:
                 self._idle.set()

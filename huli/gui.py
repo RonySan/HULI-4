@@ -473,6 +473,7 @@ class HuliPanel:
                     cycle_timeout=settings.voice_wake_cycle_timeout,
                     command_timeout=settings.voice_input_timeout,
                     feedback=True,
+                    rearm_delay=settings.voice_wake_rearm_delay,
                     aliases=self.wake_aliases,
                 )
                 self.wake.start()

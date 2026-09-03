@@ -307,6 +307,7 @@ def run_cli() -> None:
             voice.service,
             cycle_timeout=runtime.settings.voice_wake_cycle_timeout,
             command_timeout=runtime.settings.voice_input_timeout,
+            rearm_delay=runtime.settings.voice_wake_rearm_delay,
             aliases=wake_aliases,
         )
         try:

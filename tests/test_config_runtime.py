@@ -29,6 +29,7 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_VOICE_RATE": "1",
             "HULI_VOICE_VOLUME": "90",
             "HULI_VOICE_INPUT_GAIN": "2,25",
+            "HULI_VOICE_WAKE_REARM_DELAY": "2,5",
         }
     )
 
@@ -51,6 +52,7 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.voice_rate == 1
     assert settings.voice_volume == 90
     assert settings.voice_input_gain == 2.25
+    assert settings.voice_wake_rearm_delay == 2.5
     assert settings.database_path == tmp_path / "huli.db"
     assert settings.backup_dir == tmp_path / "backups"
 
@@ -74,6 +76,8 @@ def test_load_settings_rejects_invalid_voice_values() -> None:
         load_settings({"HULI_VOICE_LANGUAGE": "português brasileiro"})
     with pytest.raises(ValueError, match="HULI_VOICE_INPUT_GAIN"):
         load_settings({"HULI_VOICE_INPUT_GAIN": "5"})
+    with pytest.raises(ValueError, match="HULI_VOICE_WAKE_REARM_DELAY"):
+        load_settings({"HULI_VOICE_WAKE_REARM_DELAY": "11"})
 
 
 def test_load_settings_rejects_invalid_weather_coordinates() -> None:

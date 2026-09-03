@@ -36,7 +36,7 @@ class Settings:
     local_login_enabled: bool = False
     local_owner_name: str = "Rony"
     voice_auto_speak: bool = False
-    voice_input_timeout: int = 8
+    voice_input_timeout: int = 12
     voice_language: str = "pt-BR"
     voice_rate: int = 0
     voice_volume: int = 100
@@ -47,6 +47,7 @@ class Settings:
     voice_start_listening: bool = False
     voice_wake_enabled: bool = False
     voice_wake_cycle_timeout: int = 30
+    voice_wake_rearm_delay: float = 3.0
 
     @property
     def database_path(self) -> Path:
@@ -108,7 +109,7 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
     voice_input_timeout = _read_int(
         values,
         "HULI_VOICE_INPUT_TIMEOUT",
-        8,
+        12,
         minimum=2,
         maximum=60,
     )
@@ -162,6 +163,13 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
             30,
             minimum=2,
             maximum=120,
+        ),
+        voice_wake_rearm_delay=_read_float(
+            values,
+            "HULI_VOICE_WAKE_REARM_DELAY",
+            3.0,
+            minimum=0.0,
+            maximum=10.0,
         ),
     )
 

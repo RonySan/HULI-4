@@ -127,6 +127,31 @@ def test_name_then_pause_requests_and_queues_the_following_phrase():
         listener.stop()
 
 
+def test_incomplete_command_waits_before_rearming() -> None:
+    waits: list[float] = []
+    service = FakeService(
+        wake=["huli"],
+        commands=[VoiceTimeoutError("silêncio")],
+    )
+    listener = WakeWordListener(
+        service,
+        cycle_timeout=2,
+        command_timeout=8,
+        rearm_delay=3.0,
+        rearm_waiter=waits.append,
+    )
+    listener.start()
+    try:
+        assert listener.events.get(timeout=1).kind is WakeEventKind.STATUS
+        assert listener.events.get(timeout=1).text.endswith("comando completo.")
+        deadline = time.monotonic() + 1
+        while not waits and time.monotonic() < deadline:
+            time.sleep(0.005)
+        assert waits == [3.0]
+    finally:
+        listener.stop()
+
+
 def test_typing_prevents_background_recognition_until_keyboard_is_released():
     service = FakeService(wake=["huli que horas são"])
     listener = WakeWordListener(service, cycle_timeout=2, command_timeout=8)
