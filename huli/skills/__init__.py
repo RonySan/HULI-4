@@ -3,6 +3,7 @@
 from huli.skills.agenda_skill import AgendaSkill
 from huli.skills.application_skill import ApplicationSkill
 from huli.skills.base import Skill
+from huli.skills.calculator_skill import CalculatorSkill
 from huli.skills.conversation import ConversationSkill
 from huli.skills.daily_summary_skill import DailySummarySkill
 from huli.skills.foundation import FoundationSkill
@@ -15,11 +16,15 @@ from huli.skills.planner_skill import PlannerSkill
 from huli.skills.project_context import ProjectContextSkill
 from huli.skills.registry import DuplicateSkillError, SkillRegistry
 from huli.skills.smalltalk import SmallTalkSkill
+from huli.skills.shopping_skill import ShoppingSkill
+from huli.skills.system_health_skill import SystemHealthSkill
 from huli.skills.time_skill import TimeSkill
+from huli.skills.timer_skill import TimerSkill
 
 __all__ = [
     "AgendaSkill",
     "ApplicationSkill",
+    "CalculatorSkill",
     "ConversationSkill",
     "DailySummarySkill",
     "DuplicateSkillError",
@@ -34,5 +39,8 @@ __all__ = [
     "Skill",
     "SkillRegistry",
     "SmallTalkSkill",
+    "ShoppingSkill",
+    "SystemHealthSkill",
     "TimeSkill",
+    "TimerSkill",
 ]

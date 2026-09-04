@@ -38,7 +38,8 @@ class FoundationSkill:
                 "Posso conversar, informar hora e data, consultar agenda e tarefas, "
                 "acompanhar projetos, memória e conhecimento, além do diário privado. "
                 "Também posso abrir programas, controlar músicas e ouvir pelo botão "
-                "ou pela ativação ‘Huli’."
+                "ou pela ativação ‘Huli’. Também cuido de lista de compras, "
+                "temporizadores, cálculos e saúde do computador."
             )
         else:
             text = "Huli ativa. Kernel e Skill Registry operacionais."

@@ -1,6 +1,7 @@
 """Componentes cognitivos locais da Huli."""
 
 from huli.brain.agenda import AgendaService
+from huli.brain.calculator import CalculatorError, calculate, format_result
 from huli.brain.context import ContextEngine, ContextSnapshot, ContextTurn
 from huli.brain.daily_summary import DailySummaryService
 from huli.brain.dispatcher import BrainDispatcher
@@ -8,6 +9,7 @@ from huli.brain.intent import IntentEngine, IntentMatch, IntentName
 from huli.brain.intent_events import IntentObserver
 from huli.brain.normalization import normalize_text
 from huli.brain.planner import PlannerService
+from huli.brain.timers import TimerAlert, TimerRecord, TimerService, format_duration, parse_timer_request
 from huli.brain.weather import OpenMeteoWeatherService, WeatherError, WeatherSnapshot
 
-__all__ = ["AgendaService", "BrainDispatcher", "ContextEngine", "ContextSnapshot", "ContextTurn", "DailySummaryService", "IntentEngine", "IntentMatch", "IntentName", "IntentObserver", "OpenMeteoWeatherService", "PlannerService", "WeatherError", "WeatherSnapshot", "normalize_text"]
+__all__ = ["AgendaService", "BrainDispatcher", "CalculatorError", "ContextEngine", "ContextSnapshot", "ContextTurn", "DailySummaryService", "IntentEngine", "IntentMatch", "IntentName", "IntentObserver", "OpenMeteoWeatherService", "PlannerService", "TimerAlert", "TimerRecord", "TimerService", "WeatherError", "WeatherSnapshot", "calculate", "format_duration", "format_result", "normalize_text", "parse_timer_request"]

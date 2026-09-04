@@ -13,6 +13,7 @@ from huli.brain import (
     IntentEngine,
     OpenMeteoWeatherService,
     PlannerService,
+    TimerService,
 )
 from huli.core import EventBus, Kernel
 from huli.infrastructure import (
@@ -23,6 +24,7 @@ from huli.infrastructure import (
     RuntimeRecorder,
     Settings,
     SQLiteDatabase,
+    SystemHealthMonitor,
     TaskRepository,
     WindowsMediaController,
     configure_logging,
@@ -51,6 +53,7 @@ from huli.security.privacy import filter_private_input
 from huli.skills import (
     AgendaSkill,
     ApplicationSkill,
+    CalculatorSkill,
     ConversationSkill,
     DailySummarySkill,
     FoundationSkill,
@@ -63,7 +66,10 @@ from huli.skills import (
     ProjectContextSkill,
     SkillRegistry,
     SmallTalkSkill,
+    ShoppingSkill,
+    SystemHealthSkill,
     TimeSkill,
+    TimerSkill,
 )
 
 
@@ -96,6 +102,8 @@ class HuliRuntime:
     appointments: AppointmentRepository
     applications: ApplicationLauncher
     media: WindowsMediaController
+    system_health: SystemHealthMonitor
+    timers: TimerService
     auth: AuthService
     security: SecurityPolicy
 
@@ -127,6 +135,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     appointments = AppointmentRepository(database)
     applications = ApplicationLauncher()
     media = WindowsMediaController()
+    system_health = SystemHealthMonitor(resolved_settings.data_dir)
+    timers = TimerService()
     planner = PlannerService(tasks, events)
     agenda = AgendaService(appointments, events, resolved_settings.timezone)
     weather = OpenMeteoWeatherService(
@@ -168,7 +178,11 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills = SkillRegistry()
     skills.register(FoundationSkill())
     skills.register(TimeSkill(resolved_settings.timezone))
+    skills.register(CalculatorSkill())
+    skills.register(SystemHealthSkill(system_health))
+    skills.register(TimerSkill(timers))
     skills.register(PlannerSkill(planner))
+    skills.register(ShoppingSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
     skills.register(ApplicationSkill(applications))
     skills.register(MediaSkill(media))
@@ -225,6 +239,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         appointments=appointments,
         applications=applications,
         media=media,
+        system_health=system_health,
+        timers=timers,
         auth=auth,
         security=security,
     )

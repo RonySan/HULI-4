@@ -12,6 +12,7 @@ from uuid import uuid4
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.brain.normalization import normalize_text
+from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
@@ -38,6 +39,8 @@ _WAKE_WRITE_INTENTS = frozenset(
         "agenda.complete",
         "task.create",
         "task.complete",
+        "shopping.add",
+        "shopping.complete",
         "project.set",
         "project.note",
         "memory.remember",
@@ -92,6 +95,7 @@ class HuliPanel:
         self._wake_was_enabled = False
         self.pending_wake_command: tuple[str, float] | None = None
         self._closed = False
+        self.runtime.timers.subscribe(self._timer_finished)
 
         root.title(f"{__app_name__} {__version__} — Painel local")
         root.geometry("920x650")
@@ -296,6 +300,19 @@ class HuliPanel:
             self.root.after(0, callback, *args)
         except tk.TclError:
             return
+
+    def _timer_finished(self, alert: TimerAlert) -> None:
+        self._safe_after(self._show_timer_alert, alert)
+
+    def _show_timer_alert(self, alert: TimerAlert) -> None:
+        self._append("Huli", alert.message)
+        try:
+            if self.voice.service.capabilities().output_available:
+                self.voice.service.speak(alert.message)
+            else:
+                self.root.bell()
+        except VoiceError:
+            self.root.bell()
 
     def _typing_started(self, _event=None) -> None:
         if self.wake:
@@ -677,6 +694,7 @@ class HuliPanel:
     def close(self) -> None:
         self._closed = True
         self._end_session()
+        self.runtime.timers.shutdown()
         self.root.destroy()
 
 

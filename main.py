@@ -44,6 +44,7 @@ from uuid import uuid4
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.brain.normalization import normalize_text
+from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
@@ -68,6 +69,8 @@ _WAKE_WRITE_INTENTS = frozenset(
         "agenda.complete",
         "task.create",
         "task.complete",
+        "shopping.add",
+        "shopping.complete",
         "project.set",
         "project.note",
         "memory.remember",
@@ -198,6 +201,23 @@ def _build_voice_session(runtime: HuliRuntime) -> VoiceSession:
     return VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
 
 
+def _announce_timer(alert: TimerAlert, voice: VoiceSession) -> None:
+    print(f"\nHuli: {alert.message}", flush=True)
+    try:
+        if voice.service.capabilities().output_available:
+            voice.service.speak(alert.message)
+            return
+    except VoiceError:
+        pass
+    if os.name == "nt":
+        try:
+            import winsound
+
+            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        except (ImportError, RuntimeError):
+            pass
+
+
 def _listen(voice: VoiceSession) -> str | None:
     try:
         voice.service.prepare_input()
@@ -256,6 +276,7 @@ def _handle_voice_command(command: VoiceCommand, voice: VoiceSession) -> bool:
 def run_cli() -> None:
     runtime = build_runtime()
     voice = _build_voice_session(runtime)
+    runtime.timers.subscribe(lambda alert: _announce_timer(alert, voice))
     print(f"{__app_name__} {__version__} — Voz local para Windows.")
     session = _authenticate(runtime)
     if session.is_guest:
@@ -276,8 +297,9 @@ def run_cli() -> None:
             )
             print(f"Backup de migração: {unlock_result.migration_backup}")
     print(
-        "Recursos atuais: contexto, tarefas, agenda, resumo, projetos, memória, "
-        "conhecimento estruturado, personalidade contextual, diário privado e voz."
+        "Recursos atuais: contexto, tarefas, agenda, compras, temporizadores, "
+        "calculadora, saúde do computador, projetos, memória, conhecimento, "
+        "diário privado e voz."
     )
     if not runtime.settings.local_login_enabled:
         print(
@@ -428,6 +450,7 @@ def run_cli() -> None:
     finally:
         if wake:
             wake.stop()
+        runtime.timers.shutdown()
         runtime.context.clear(session.session_id)
         if session.token:
             runtime.auth.revoke_token(session.token)

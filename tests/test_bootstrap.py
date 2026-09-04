@@ -14,7 +14,11 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
     assert runtime.skills.names == (
         "foundation",
         "time",
+        "calculator",
+        "computer-health",
+        "timers",
         "planner",
+        "shopping",
         "agenda",
         "applications",
         "media",

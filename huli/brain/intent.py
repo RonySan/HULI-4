@@ -12,6 +12,8 @@ from huli.brain.normalization import normalize_text
 
 class IntentName(StrEnum):
     SYSTEM_STATUS = "system.status"
+    COMPUTER_HEALTH = "computer.health"
+    CALCULATOR_QUERY = "calculator.query"
     TIME_QUERY = "time.query"
     DATE_QUERY = "date.query"
     MORNING_BRIEFING = "morning.briefing"
@@ -22,6 +24,12 @@ class IntentName(StrEnum):
     TASK_CREATE = "task.create"
     TASK_LIST = "task.list"
     TASK_COMPLETE = "task.complete"
+    SHOPPING_ADD = "shopping.add"
+    SHOPPING_LIST = "shopping.list"
+    SHOPPING_COMPLETE = "shopping.complete"
+    TIMER_CREATE = "timer.create"
+    TIMER_LIST = "timer.list"
+    TIMER_CANCEL = "timer.cancel"
     DAILY_SUMMARY = "daily.summary"
     SMALL_TALK = "smalltalk"
     CONVERSATION_RECAP = "conversation.recap"
@@ -71,6 +79,70 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.TIMER_CANCEL,
+                re.compile(
+                    r"^(?:cancele|cancelar|pare|parar)\s+(?:o\s+)?(?:timer|temporizador|cronometro)(?:\s+(?:numero\s*)?#?\d+)$"
+                ),
+                0.995,
+                "timer-cancel",
+            ),
+            _IntentRule(
+                IntentName.TIMER_LIST,
+                re.compile(
+                    r"^(?:(?:quais|liste|listar|mostre|mostrar)\s+(?:os\s+)?(?:timers|temporizadores|cronometros)(?:\s+ativos)?|(?:timers|temporizadores|cronometros)\s+ativos)$"
+                ),
+                0.99,
+                "timer-list",
+            ),
+            _IntentRule(
+                IntentName.TIMER_CREATE,
+                re.compile(
+                    r"^(?:(?:crie|criar|inicie|iniciar|coloque|colocar)?\s*(?:um\s+)?(?:timer|temporizador|cronometro)\s+(?:de|para)\s+.+|me\s+avise\s+em\s+.+\b(?:segundos?|minutos?|horas?)\b.*)$"
+                ),
+                0.99,
+                "timer-create",
+            ),
+            _IntentRule(
+                IntentName.COMPUTER_HEALTH,
+                re.compile(
+                    r"^(?:como (?:esta|ta)|verifique|verificar|mostre|qual (?:e )?o estado d[oa]) (?:meu |o )?(?:computador|pc|notebook)(?: hoje)?$|^(?:saude|desempenho|uso) (?:do|de meu|do meu) (?:computador|pc|notebook)$"
+                ),
+                0.99,
+                "computer-health",
+            ),
+            _IntentRule(
+                IntentName.CALCULATOR_QUERY,
+                re.compile(
+                    r"^(?:calcule|calcular|calcula|quanto (?:e|eh|da)|qual (?:e )?o resultado de|faca a conta)\s+.+$"
+                ),
+                0.99,
+                "calculator-query",
+            ),
+            _IntentRule(
+                IntentName.SHOPPING_COMPLETE,
+                re.compile(
+                    r"^(?:(?:eu )?(?:ja )?comprei\s+.+|(?:marque|marcar)\s+.+\s+como\s+comprad[oa]|(?:retire|retirar|remova|remover)\s+.+\s+(?:da|de)\s+(?:minha\s+)?lista\s+de\s+compras)$"
+                ),
+                0.995,
+                "shopping-complete",
+            ),
+            _IntentRule(
+                IntentName.SHOPPING_LIST,
+                re.compile(
+                    r"^(?:(?:minha\s+)?lista\s+de\s+compras|(?:mostre|mostrar|liste|listar)\s+(?:a\s+)?(?:minha\s+)?lista\s+de\s+compras|o que (?:ainda )?(?:falta|preciso|temos que) comprar)$"
+                ),
+                0.99,
+                "shopping-list",
+            ),
+            _IntentRule(
+                IntentName.SHOPPING_ADD,
+                re.compile(
+                    r"^(?:(?:adicione|adicionar|adiciona|coloque|colocar|inclua|incluir)\s+.+\s+(?:na|a)\s+(?:minha\s+)?lista\s+de\s+compras|(?:lista\s+de\s+compras)\s*.+|(?:eu\s+)?preciso\s+comprar\s+.+)$"
+                ),
+                0.99,
+                "shopping-add",
+            ),
             _IntentRule(
                 IntentName.JOURNAL_RESTORE,
                 re.compile(
