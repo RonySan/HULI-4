@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.16`
+- **Versão:** `4.0.0-alpha.17`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
@@ -132,6 +132,10 @@ A `alpha.16` acrescenta quatro ferramentas locais para a rotina: diagnóstico
 curto do computador, calculadora segura, lista de compras persistente e
 temporizadores com alerta falado. Todas funcionam por teclado e por voz, sem
 enviar os dados para serviços externos.
+
+A `alpha.17` acrescenta hábitos com acompanhamento semanal, sessões de foco,
+escolha objetiva da próxima prioridade e avisos automáticos da agenda quinze
+minutos antes. Os avisos funcionam enquanto a Huli estiver aberta.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
