@@ -30,6 +30,11 @@ class IntentName(StrEnum):
     TIMER_CREATE = "timer.create"
     TIMER_LIST = "timer.list"
     TIMER_CANCEL = "timer.cancel"
+    HABIT_CREATE = "habit.create"
+    HABIT_LIST = "habit.list"
+    HABIT_COMPLETE = "habit.complete"
+    FOCUS_START = "focus.start"
+    FOCUS_NEXT = "focus.next"
     DAILY_SUMMARY = "daily.summary"
     SMALL_TALK = "smalltalk"
     CONVERSATION_RECAP = "conversation.recap"
@@ -79,6 +84,46 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.HABIT_COMPLETE,
+                re.compile(
+                    r"^(?:(?:marque|marcar)\s+(?:o\s+)?habito\s+.+\s+como\s+(?:feito|concluido)|(?:conclua|concluir|complete|completar|cumpri|fiz)\s+(?:o\s+)?habito\s+.+)$"
+                ),
+                0.995,
+                "habit-complete",
+            ),
+            _IntentRule(
+                IntentName.HABIT_LIST,
+                re.compile(
+                    r"^(?:(?:meus|os meus)\s+habitos|habitos\s+de\s+hoje|(?:como estao|mostre|liste|listar)\s+(?:os\s+)?(?:meus\s+)?habitos|progresso\s+(?:dos\s+)?(?:meus\s+)?habitos)$"
+                ),
+                0.99,
+                "habit-list",
+            ),
+            _IntentRule(
+                IntentName.HABIT_CREATE,
+                re.compile(
+                    r"^(?:(?:crie|criar|adicione|adicionar|cadastre|cadastrar)\s+(?:um\s+)?habito\s+.+|novo\s+habito\s+.+)$"
+                ),
+                0.995,
+                "habit-create",
+            ),
+            _IntentRule(
+                IntentName.FOCUS_NEXT,
+                re.compile(
+                    r"^(?:qual (?:e )?a minha prioridade agora|no que (?:eu )?devo focar agora|o que (?:eu )?faco agora|qual (?:e )?o proximo passo)$"
+                ),
+                0.99,
+                "focus-next",
+            ),
+            _IntentRule(
+                IntentName.FOCUS_START,
+                re.compile(
+                    r"^(?:(?:inicie|iniciar|comece|comecar|ative|ativar)\s+(?:uma\s+)?(?:sessao\s+de\s+)?foco(?:\s+(?:por|de|para)\s+.+)?|(?:inicie|iniciar|comece|comecar)\s+(?:um\s+)?pomodoro(?:\s+.+)?)$"
+                ),
+                0.99,
+                "focus-start",
+            ),
             _IntentRule(
                 IntentName.TIMER_CANCEL,
                 re.compile(

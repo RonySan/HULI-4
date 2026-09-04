@@ -44,6 +44,7 @@ from uuid import uuid4
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.brain.normalization import normalize_text
+from huli.brain.agenda_reminders import AgendaReminderAlert
 from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticationError, JournalVaultError
@@ -71,6 +72,8 @@ _WAKE_WRITE_INTENTS = frozenset(
         "task.complete",
         "shopping.add",
         "shopping.complete",
+        "habit.create",
+        "habit.complete",
         "project.set",
         "project.note",
         "memory.remember",
@@ -218,6 +221,23 @@ def _announce_timer(alert: TimerAlert, voice: VoiceSession) -> None:
             pass
 
 
+def _announce_agenda_reminder(alert: AgendaReminderAlert, voice: VoiceSession) -> None:
+    print(f"\nHuli: {alert.message}", flush=True)
+    try:
+        if voice.service.capabilities().output_available:
+            voice.service.speak(alert.message)
+            return
+    except VoiceError:
+        pass
+    if os.name == "nt":
+        try:
+            import winsound
+
+            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        except (ImportError, RuntimeError):
+            pass
+
+
 def _listen(voice: VoiceSession) -> str | None:
     try:
         voice.service.prepare_input()
@@ -277,6 +297,9 @@ def run_cli() -> None:
     runtime = build_runtime()
     voice = _build_voice_session(runtime)
     runtime.timers.subscribe(lambda alert: _announce_timer(alert, voice))
+    runtime.agenda_reminders.subscribe(
+        lambda alert: _announce_agenda_reminder(alert, voice)
+    )
     print(f"{__app_name__} {__version__} — Voz local para Windows.")
     session = _authenticate(runtime)
     if session.is_guest:
@@ -298,8 +321,8 @@ def run_cli() -> None:
             print(f"Backup de migração: {unlock_result.migration_backup}")
     print(
         "Recursos atuais: contexto, tarefas, agenda, compras, temporizadores, "
-        "calculadora, saúde do computador, projetos, memória, conhecimento, "
-        "diário privado e voz."
+        "calculadora, hábitos, foco, avisos da agenda, saúde do computador, "
+        "projetos, memória, conhecimento, diário privado e voz."
     )
     if not runtime.settings.local_login_enabled:
         print(
@@ -320,6 +343,8 @@ def run_cli() -> None:
         "Digite 'sair' para encerrar."
     )
     print(f"Dados locais: {runtime.settings.data_dir}")
+    if not session.is_guest:
+        runtime.agenda_reminders.start()
     wake: WakeWordListener | None = None
     if runtime.settings.voice_wake_enabled:
         wake_aliases = WakeAliasStore(
@@ -451,6 +476,7 @@ def run_cli() -> None:
         if wake:
             wake.stop()
         runtime.timers.shutdown()
+        runtime.agenda_reminders.stop()
         runtime.context.clear(session.session_id)
         if session.token:
             runtime.auth.revoke_token(session.token)

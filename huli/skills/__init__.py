@@ -7,6 +7,8 @@ from huli.skills.calculator_skill import CalculatorSkill
 from huli.skills.conversation import ConversationSkill
 from huli.skills.daily_summary_skill import DailySummarySkill
 from huli.skills.foundation import FoundationSkill
+from huli.skills.focus_skill import FocusSkill
+from huli.skills.habit_skill import HabitSkill
 from huli.skills.journal_skill import JournalSkill
 from huli.skills.knowledge_skill import KnowledgeSkill
 from huli.skills.memory_skill import MemorySkill
@@ -29,6 +31,8 @@ __all__ = [
     "DailySummarySkill",
     "DuplicateSkillError",
     "FoundationSkill",
+    "FocusSkill",
+    "HabitSkill",
     "JournalSkill",
     "KnowledgeSkill",
     "MemorySkill",

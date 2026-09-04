@@ -48,6 +48,8 @@ class Settings:
     voice_wake_enabled: bool = False
     voice_wake_cycle_timeout: int = 30
     voice_wake_rearm_delay: float = 3.0
+    agenda_reminder_minutes: int = 15
+    agenda_reminder_poll_seconds: int = 30
 
     @property
     def database_path(self) -> Path:
@@ -170,6 +172,20 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
             3.0,
             minimum=0.0,
             maximum=10.0,
+        ),
+        agenda_reminder_minutes=_read_int(
+            values,
+            "HULI_AGENDA_REMINDER_MINUTES",
+            15,
+            minimum=1,
+            maximum=120,
+        ),
+        agenda_reminder_poll_seconds=_read_int(
+            values,
+            "HULI_AGENDA_REMINDER_POLL_SECONDS",
+            30,
+            minimum=5,
+            maximum=300,
         ),
     )
 

@@ -7,9 +7,11 @@ import logging
 
 from huli.brain import (
     AgendaService,
+    AgendaReminderService,
     BrainDispatcher,
     ContextEngine,
     DailySummaryService,
+    HabitService,
     IntentEngine,
     OpenMeteoWeatherService,
     PlannerService,
@@ -20,6 +22,7 @@ from huli.infrastructure import (
     ApplicationLauncher,
     AppointmentRepository,
     EventRepository,
+    HabitRepository,
     InteractionRepository,
     RuntimeRecorder,
     Settings,
@@ -57,6 +60,8 @@ from huli.skills import (
     ConversationSkill,
     DailySummarySkill,
     FoundationSkill,
+    FocusSkill,
+    HabitSkill,
     JournalSkill,
     KnowledgeSkill,
     MemorySkill,
@@ -83,8 +88,10 @@ class HuliRuntime:
     personality: PersonalityEngine
     planner: PlannerService
     agenda: AgendaService
+    agenda_reminders: AgendaReminderService
     weather: OpenMeteoWeatherService
     daily_summary: DailySummaryService
+    habits: HabitService
     memory: MemoryEngine
     memory_repository: MemoryRepository
     knowledge: KnowledgeService
@@ -100,6 +107,7 @@ class HuliRuntime:
     interactions: InteractionRepository
     tasks: TaskRepository
     appointments: AppointmentRepository
+    habit_repository: HabitRepository
     applications: ApplicationLauncher
     media: WindowsMediaController
     system_health: SystemHealthMonitor
@@ -139,6 +147,11 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     timers = TimerService()
     planner = PlannerService(tasks, events)
     agenda = AgendaService(appointments, events, resolved_settings.timezone)
+    agenda_reminders = AgendaReminderService(
+        agenda,
+        lead_minutes=resolved_settings.agenda_reminder_minutes,
+        poll_seconds=resolved_settings.agenda_reminder_poll_seconds,
+    )
     weather = OpenMeteoWeatherService(
         location=resolved_settings.weather_location,
         latitude=resolved_settings.weather_latitude,
@@ -146,6 +159,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         timezone_name=resolved_settings.timezone,
     )
     daily_summary = DailySummaryService(planner, agenda)
+    habit_repository = HabitRepository(database)
+    habits = HabitService(habit_repository, events)
 
     memory_repository = MemoryRepository(database)
     memory = MemoryEngine(memory_repository, MemoryPolicy(), events)
@@ -181,6 +196,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(CalculatorSkill())
     skills.register(SystemHealthSkill(system_health))
     skills.register(TimerSkill(timers))
+    skills.register(FocusSkill(timers, planner, agenda))
+    skills.register(HabitSkill(habits, resolved_settings.timezone))
     skills.register(PlannerSkill(planner))
     skills.register(ShoppingSkill(planner))
     skills.register(AgendaSkill(agenda, resolved_settings.timezone))
@@ -220,8 +237,10 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         personality=personality,
         planner=planner,
         agenda=agenda,
+        agenda_reminders=agenda_reminders,
         weather=weather,
         daily_summary=daily_summary,
+        habits=habits,
         memory=memory,
         memory_repository=memory_repository,
         knowledge=knowledge,
@@ -237,6 +256,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         interactions=interactions,
         tasks=tasks,
         appointments=appointments,
+        habit_repository=habit_repository,
         applications=applications,
         media=media,
         system_health=system_health,

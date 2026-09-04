@@ -39,7 +39,7 @@ class FoundationSkill:
                 "acompanhar projetos, memória e conhecimento, além do diário privado. "
                 "Também posso abrir programas, controlar músicas e ouvir pelo botão "
                 "ou pela ativação ‘Huli’. Também cuido de lista de compras, "
-                "temporizadores, cálculos e saúde do computador."
+                "temporizadores, hábitos, sessões de foco, cálculos e saúde do computador."
             )
         else:
             text = "Huli ativa. Kernel e Skill Registry operacionais."

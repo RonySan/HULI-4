@@ -12,6 +12,7 @@ from uuid import uuid4
 from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.brain.normalization import normalize_text
+from huli.brain.agenda_reminders import AgendaReminderAlert
 from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticationError, JournalVaultError
@@ -41,6 +42,8 @@ _WAKE_WRITE_INTENTS = frozenset(
         "task.complete",
         "shopping.add",
         "shopping.complete",
+        "habit.create",
+        "habit.complete",
         "project.set",
         "project.note",
         "memory.remember",
@@ -96,6 +99,7 @@ class HuliPanel:
         self.pending_wake_command: tuple[str, float] | None = None
         self._closed = False
         self.runtime.timers.subscribe(self._timer_finished)
+        self.runtime.agenda_reminders.subscribe(self._agenda_reminder_finished)
 
         root.title(f"{__app_name__} {__version__} — Painel local")
         root.geometry("920x650")
@@ -245,6 +249,8 @@ class HuliPanel:
             "Huli",
             "Sessão iniciada. Use o teclado, ‘Ouvir agora’ ou ligue a escuta contínua.",
         )
+        if not session.is_guest:
+            self.runtime.agenda_reminders.start()
         if (
             not session.is_guest
             and self.runtime.settings.voice_wake_enabled
@@ -305,6 +311,19 @@ class HuliPanel:
         self._safe_after(self._show_timer_alert, alert)
 
     def _show_timer_alert(self, alert: TimerAlert) -> None:
+        self._append("Huli", alert.message)
+        try:
+            if self.voice.service.capabilities().output_available:
+                self.voice.service.speak(alert.message)
+            else:
+                self.root.bell()
+        except VoiceError:
+            self.root.bell()
+
+    def _agenda_reminder_finished(self, alert: AgendaReminderAlert) -> None:
+        self._safe_after(self._show_agenda_reminder, alert)
+
+    def _show_agenda_reminder(self, alert: AgendaReminderAlert) -> None:
         self._append("Huli", alert.message)
         try:
             if self.voice.service.capabilities().output_available:
@@ -677,6 +696,7 @@ class HuliPanel:
         self._show_login()
 
     def _end_session(self) -> None:
+        self.runtime.agenda_reminders.stop()
         if self.calibrating:
             self.calibrating = False
             self._calibration_cancel.set()

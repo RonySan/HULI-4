@@ -17,6 +17,8 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "calculator",
         "computer-health",
         "timers",
+        "focus",
+        "habits",
         "planner",
         "shopping",
         "agenda",
@@ -31,7 +33,7 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "memory",
         "knowledge",
     )
-    assert runtime.database.schema_version() == 8
+    assert runtime.database.schema_version() == 9
     assert runtime.journal_vault.is_unlocked("rony") is False
     assert runtime.journal_repository.count_active("rony") == 0
     assert runtime.memory_repository.count_active("rony") == 0

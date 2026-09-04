@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 8
+_SCHEMA_VERSION = 9
 
 
 class SQLiteDatabase:
@@ -68,6 +68,9 @@ class SQLiteDatabase:
             if 8 not in applied:
                 self._migration_008_journal_vault(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (8)")
+            if 9 not in applied:
+                self._migration_009_habits(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (9)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -386,6 +389,34 @@ class SQLiteDatabase:
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
+            """
+        )
+
+    @staticmethod
+    def _migration_009_habits(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS habits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL COLLATE NOCASE,
+                name TEXT NOT NULL,
+                normalized_name TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                archived_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_habits_owner_active
+            ON habits(owner, is_active, id);
+
+            CREATE TABLE IF NOT EXISTS habit_completions (
+                habit_id INTEGER NOT NULL,
+                completion_date TEXT NOT NULL,
+                completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(habit_id, completion_date),
+                FOREIGN KEY(habit_id) REFERENCES habits(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_habit_completions_date
+            ON habit_completions(completion_date, habit_id);
             """
         )
 
