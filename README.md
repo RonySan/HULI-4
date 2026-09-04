@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.15`
+- **Versão:** `4.0.0-alpha.16`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
@@ -127,6 +127,11 @@ A `alpha.15` corrige a transcrição observada “esporte pai” exclusivamente 
 contexto de abrir o Spotify, adiciona músicas favoritas e controles locais de
 reprodução. A captura após o chamado agora aguarda 12 segundos e usa um intervalo
 de rearme para reduzir chamados incompletos repetidos.
+
+A `alpha.16` acrescenta quatro ferramentas locais para a rotina: diagnóstico
+curto do computador, calculadora segura, lista de compras persistente e
+temporizadores com alerta falado. Todas funcionam por teclado e por voz, sem
+enviar os dados para serviços externos.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
