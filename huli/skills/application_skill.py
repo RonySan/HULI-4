@@ -51,7 +51,12 @@ class ApplicationSkill:
             )
         return KernelResponse(
             request_id=request.request_id,
-            text=f"Abrindo {application.name}.",
+            text=(
+                "O aplicativo do Spotify não está instalado no Windows; "
+                "abrindo o Spotify Web."
+                if application.source == "fallback web"
+                else f"Abrindo {application.name}."
+            ),
             handled_by=self.name,
         )
 

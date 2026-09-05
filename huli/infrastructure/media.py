@@ -27,30 +27,42 @@ class WindowsMediaController:
         "pause": 47,
     }
     _SPOTIFY_FAVORITES = "spotify:collection:tracks"
+    _SPOTIFY_FAVORITES_WEB = "https://open.spotify.com/collection/tracks"
 
     def __init__(
         self,
         *,
         uri_opener: Callable[[str], None] | None = None,
         command_sender: Callable[[int], None] | None = None,
+        spotify_protocol_available: Callable[[], bool] | None = None,
         sleeper: Callable[[float], None] = time.sleep,
         platform_name: str | None = None,
     ) -> None:
         self.platform_name = platform_name or sys.platform
         self._uri_opener = uri_opener or self._startfile
         self._command_sender = command_sender or self._send_windows_command
+        self._spotify_protocol_available = (
+            spotify_protocol_available or self._has_spotify_protocol
+        )
         self._sleeper = sleeper
 
     def play_favorites(self) -> None:
         self._check_windows()
         try:
-            self._uri_opener(self._SPOTIFY_FAVORITES)
-            self._sleeper(2.0)
-            self._command_sender(self._COMMANDS["play"])
+            desktop_available = self._spotify_protocol_available()
+            target = (
+                self._SPOTIFY_FAVORITES
+                if desktop_available
+                else self._SPOTIFY_FAVORITES_WEB
+            )
+            self._uri_opener(target)
+            if desktop_available:
+                self._sleeper(2.0)
+                self._command_sender(self._COMMANDS["play"])
         except OSError as exc:
             raise MediaControlError(
                 "Não consegui abrir suas músicas favoritas no Spotify. "
-                "Confirme se o aplicativo está instalado."
+                "Confirme a instalação do aplicativo ou o acesso ao Spotify Web."
             ) from exc
 
     def play(self) -> None:
@@ -85,11 +97,26 @@ class WindowsMediaController:
 
     @staticmethod
     def _startfile(uri: str) -> None:
-        if uri != WindowsMediaController._SPOTIFY_FAVORITES:
+        if uri not in {
+            WindowsMediaController._SPOTIFY_FAVORITES,
+            WindowsMediaController._SPOTIFY_FAVORITES_WEB,
+        }:
             raise OSError("URI de mídia não autorizada.")
         if not hasattr(os, "startfile"):
             raise OSError("Abertura local indisponível.")
         os.startfile(uri)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def _has_spotify_protocol() -> bool:
+        try:
+            import winreg
+        except ImportError:
+            return False
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "spotify"):
+                return True
+        except OSError:
+            return False
 
     @classmethod
     def _send_windows_command(cls, command: int) -> None:

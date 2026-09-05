@@ -49,6 +49,44 @@ def test_spoken_spotify_alias_resolves_only_inside_application_launcher(
     assert plural.name == "Spotify"
 
 
+def test_spotify_uses_fixed_web_fallback_when_desktop_is_absent(
+    tmp_path: Path,
+) -> None:
+    opened: list[str] = []
+    launcher = ApplicationLauncher(
+        start_menu_roots=(tmp_path,),
+        aliases={},
+        opener=opened.append,
+        platform_name="win32",
+    )
+
+    application = launcher.launch("esporte pai")
+
+    assert application.name == "Spotify Web"
+    assert application.source == "fallback web"
+    assert application.target == "https://open.spotify.com"
+    assert opened == ["https://open.spotify.com"]
+
+
+def test_spotify_ignores_empty_windows_execution_alias(tmp_path: Path) -> None:
+    windows_apps = tmp_path / "Microsoft" / "WindowsApps"
+    windows_apps.mkdir(parents=True)
+    stale_alias = windows_apps / "spotify_cli.exe"
+    stale_alias.touch()
+    opened: list[str] = []
+    launcher = ApplicationLauncher(
+        start_menu_roots=(tmp_path,),
+        aliases={"spotify_cli": stale_alias},
+        opener=opened.append,
+        platform_name="win32",
+    )
+
+    application = launcher.launch("spotify")
+
+    assert application.name == "Spotify Web"
+    assert opened == ["https://open.spotify.com"]
+
+
 @pytest.mark.parametrize(
     "query",
     (
@@ -92,3 +130,27 @@ def test_application_skill_extracts_and_opens_by_name(tmp_path: Path) -> None:
     assert opened == [str(chrome.resolve())]
     assert extract_application_name("Huli, abra o aplicativo Paint") == "Paint"
     assert extract_application_name("abrir o esporte pai") == "esporte pai"
+
+
+def test_application_skill_explains_spotify_web_fallback(tmp_path: Path) -> None:
+    opened: list[str] = []
+    launcher = ApplicationLauncher(
+        start_menu_roots=(tmp_path,),
+        aliases={},
+        opener=opened.append,
+        platform_name="win32",
+    )
+    skill = ApplicationSkill(launcher)
+    request = KernelRequest.from_text(
+        "abrir esporte pai",
+        metadata={"intent": "app.open"},
+    )
+
+    response = skill.handle(request)
+
+    assert response.ok
+    assert response.text == (
+        "O aplicativo do Spotify não está instalado no Windows; "
+        "abrindo o Spotify Web."
+    )
+    assert opened == ["https://open.spotify.com"]

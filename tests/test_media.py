@@ -5,13 +5,14 @@ from huli.infrastructure.media import MediaControlError, WindowsMediaController
 from huli.skills.media_skill import MediaSkill
 
 
-def build_controller():
+def build_controller(*, desktop_available: bool = True):
     opened: list[str] = []
     commands: list[int] = []
     waits: list[float] = []
     controller = WindowsMediaController(
         uri_opener=opened.append,
         command_sender=commands.append,
+        spotify_protocol_available=lambda: desktop_available,
         sleeper=waits.append,
         platform_name="win32",
     )
@@ -26,6 +27,16 @@ def test_favorites_opens_only_fixed_spotify_uri_then_plays() -> None:
     assert opened == ["spotify:collection:tracks"]
     assert commands == [46]
     assert waits == [2.0]
+
+
+def test_favorites_uses_spotify_web_when_desktop_is_absent() -> None:
+    controller, opened, commands, waits = build_controller(desktop_available=False)
+
+    controller.play_favorites()
+
+    assert opened == ["https://open.spotify.com/collection/tracks"]
+    assert commands == []
+    assert waits == []
 
 
 def test_media_controls_use_distinct_windows_commands() -> None:

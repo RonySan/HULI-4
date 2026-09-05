@@ -19,7 +19,7 @@ class ApplicationLaunchError(ValueError):
 @dataclass(frozen=True, slots=True)
 class InstalledApplication:
     name: str
-    target: Path
+    target: Path | str
     source: str
 
 
@@ -51,6 +51,7 @@ class ApplicationLauncher:
 
     _ALLOWED_SUFFIXES = {".exe", ".lnk"}
     _FORBIDDEN_QUERY = re.compile(r"[\\/:|&;<>`$%\r\n]")
+    _SPOTIFY_WEB = "https://open.spotify.com"
 
     def __init__(
         self,
@@ -78,7 +79,10 @@ class ApplicationLauncher:
     def launch(self, requested_name: str) -> InstalledApplication:
         query = self._validate_query(requested_name)
         applications = self.discover()
-        match = self._resolve(query, applications)
+        if _application_key(query) == "spotify":
+            match = self._resolve_spotify(applications)
+        else:
+            match = self._resolve(query, applications)
         try:
             self._opener(str(match.target))
         except OSError as exc:
@@ -86,6 +90,51 @@ class ApplicationLauncher:
                 f"O Windows não conseguiu abrir {match.name}."
             ) from exc
         return match
+
+    @classmethod
+    def _resolve_spotify(
+        cls,
+        applications: tuple[InstalledApplication, ...],
+    ) -> InstalledApplication:
+        """Prefere uma instalação real e nunca executa aliases vazios do Windows."""
+
+        candidates = [
+            application
+            for application in applications
+            if "spotify" in _application_key(application.name)
+            and cls._is_usable_spotify_target(application.target)
+        ]
+        if candidates:
+            source_priority = {
+                "menu iniciar": 0,
+                "registro do Windows": 1,
+                "sistema": 2,
+            }
+            return min(
+                candidates,
+                key=lambda item: (
+                    source_priority.get(item.source, 9),
+                    len(str(item.target)),
+                ),
+            )
+        return InstalledApplication(
+            name="Spotify Web",
+            target=cls._SPOTIFY_WEB,
+            source="fallback web",
+        )
+
+    @staticmethod
+    def _is_usable_spotify_target(target: Path | str) -> bool:
+        if not isinstance(target, Path):
+            return False
+        try:
+            is_windows_alias = (
+                target.parent.name.casefold() == "windowsapps"
+                and target.name.casefold() in {"spotify.exe", "spotify_cli.exe"}
+            )
+            return not (is_windows_alias and target.stat().st_size == 0)
+        except OSError:
+            return False
 
     def discover(self) -> tuple[InstalledApplication, ...]:
         if not self.platform_name.casefold().startswith("win"):

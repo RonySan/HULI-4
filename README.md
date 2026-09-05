@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.18`
+- **Versão:** `4.0.0-alpha.19`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
@@ -141,6 +141,11 @@ A `alpha.18` melhora comandos observados no uso real: agenda do mês ou da
 semana, números falados na calculadora, hábitos no plural e abertura do Spotify
 com reprodução das favoritas na mesma frase. A escuta contínua agora aumenta o
 intervalo após chamados incompletos e pausa após três repetições, evitando spam.
+
+A `alpha.19` corrige a abertura do Spotify em computadores com atalhos de
+execução vazios do Windows. “Spotify”, “esporte pai” e “esportes pai” procuram
+primeiro uma instalação real; quando ela não existe, a Huli abre com segurança o
+Spotify Web. O mesmo fallback atende ao pedido de tocar as músicas favoritas.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
