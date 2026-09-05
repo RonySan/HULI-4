@@ -45,6 +45,9 @@ def test_spoken_spotify_alias_resolves_only_inside_application_launcher(
     assert application.target.name == "spotify_cli.exe"
     assert opened == [str(application.target)]
 
+    plural = launcher.launch("esportes pai")
+    assert plural.name == "Spotify"
+
 
 @pytest.mark.parametrize(
     "query",

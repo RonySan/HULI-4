@@ -439,6 +439,12 @@ def run_cli() -> None:
                 if _handle_voice_command(voice_command, voice):
                     continue
                 intent = runtime.intents.classify(text).intent.value
+                if from_wake and intent == "unknown":
+                    print(
+                        "Huli: Não entendi o comando completo. Espere 'Estou ouvindo' "
+                        "e fale novamente um pouco mais devagar."
+                    )
+                    continue
                 if from_wake and _wake_requires_confirmation(intent):
                     pending_wake_command = (text, time.monotonic() + 30)
                     print(

@@ -36,6 +36,16 @@ def test_calculator_handles_arithmetic_percentage_and_decimal_comma() -> None:
     assert calculate("calcule (20 + 5) vezes 2") == pytest.approx(50)
     assert calculate("quanto é 10,5 dividido por 2") == pytest.approx(5.25)
     assert format_result(127.5) == "127,5"
+    assert calculate("some para mim mil quatrocentos mais cento e trinta e um") == pytest.approx(1531)
+    assert calculate("quanto é dois milhões cento e trinta e um mil e sete") == pytest.approx(2_131_007)
+
+
+def test_calculator_explains_ambiguous_spoken_number_instead_of_guessing() -> None:
+    with pytest.raises(CalculatorError, match="ambígua"):
+        calculate(
+            "some para mim mil quatrocentos mais cento e trinta e um mil "
+            "cento e setenta mil cento e vinte e sete"
+        )
 
 
 @pytest.mark.parametrize(

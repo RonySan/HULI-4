@@ -101,6 +101,7 @@ class WakeWordListener:
         aliases: tuple[str, ...] = (),
         rearm_delay: float = 3.0,
         rearm_waiter: Callable[[float], object] | None = None,
+        max_incomplete_activations: int = 3,
     ) -> None:
         self.service = service
         self.cycle_timeout = cycle_timeout
@@ -123,6 +124,8 @@ class WakeWordListener:
         self._idle.set()
         self._thread: Thread | None = None
         self._last_feedback = 0.0
+        self._incomplete_activations = 0
+        self._max_incomplete_activations = max(2, int(max_incomplete_activations))
         self._rearm_waiter = rearm_waiter or self._stop.wait
 
     @property
@@ -154,7 +157,10 @@ class WakeWordListener:
             self._cancel.clear()
 
     def enable(self) -> None:
+        self._incomplete_activations = 0
         self._enabled.set()
+        if not self._paused.is_set() and not self._typing.is_set():
+            self._cancel.clear()
 
     def disable(self) -> None:
         self._enabled.clear()
@@ -212,6 +218,7 @@ class WakeWordListener:
     def _deliver(self, command: str) -> None:
         if not command or not self._ready():
             return
+        self._incomplete_activations = 0
         self._paused.set()
         self._cancel.set()
         if not self._emit(WakeEventKind.COMMAND, command):
@@ -255,11 +262,25 @@ class WakeWordListener:
                 continue
             except VoiceTimeoutError:
                 if activated and self._ready():
-                    self._emit(
-                        WakeEventKind.STATUS,
-                        "Huli: Ouvi o chamado, mas não recebi um comando completo.",
-                    )
-                    self._rearm_waiter(self.rearm_delay)
+                    self._incomplete_activations += 1
+                    if self._incomplete_activations >= self._max_incomplete_activations:
+                        self._enabled.clear()
+                        self._cancel.set()
+                        self._emit(
+                            WakeEventKind.STATUS,
+                            "Huli: Escuta contínua pausada após chamados repetidos sem comando. Ligue novamente pelo botão quando quiser.",
+                        )
+                    else:
+                        if self._incomplete_activations == 1:
+                            self._emit(
+                                WakeEventKind.STATUS,
+                                "Huli: Ouvi o chamado, mas não recebi um comando completo.",
+                            )
+                        delay = min(
+                            30.0,
+                            self.rearm_delay * (2 ** (self._incomplete_activations - 1)),
+                        )
+                        self._rearm_waiter(delay)
             except VoiceUnavailableError as exc:
                 self._emit(WakeEventKind.ERROR, f"Huli: Ativação por voz indisponível: {exc}")
                 self._enabled.clear()

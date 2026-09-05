@@ -103,7 +103,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.HABIT_CREATE,
                 re.compile(
-                    r"^(?:(?:crie|criar|adicione|adicionar|cadastre|cadastrar)\s+(?:um\s+)?habito\s+.+|novo\s+habito\s+.+)$"
+                    r"^(?:(?:crie|criar|adicione|adicionar|cadastre|cadastrar)\s+(?:um\s+)?habitos?\s+(?:para\s+)?\S.+|novo\s+habito\s+.+)$"
                 ),
                 0.995,
                 "habit-create",
@@ -159,7 +159,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.CALCULATOR_QUERY,
                 re.compile(
-                    r"^(?:calcule|calcular|calcula|quanto (?:e|eh|da)|qual (?:e )?o resultado de|faca a conta)\s+.+$"
+                    r"^(?:calcule|calcular|calcula|quanto (?:e|eh|da)|qual (?:e )?o resultado de|faca a conta|(?:some|soma|somar|subtraia|subtrair|multiplique|multiplicar|divida|dividir)(?: para mim)?)\s+.+$"
                 ),
                 0.99,
                 "calculator-query",
@@ -389,10 +389,18 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_QUERY,
                 re.compile(
-                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite)|compromissos (?:(?:de|para|pra) )?(?:hoje|amanha|esta noite|essa noite)|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:(?:para|pra) )?(?:hoje|amanha)\b"
+                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|^(?:voce sabe )?quando (?:eu )?(?:tenho|tem|temos) compromissos (?:este|esse|neste|nesse) (?:mes|semana)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite|(?:este|esse|neste) (?:mes|semana))|compromissos (?:(?:de|para|pra) )?(?:hoje|amanha|esta noite|essa noite|(?:deste|desse|neste) (?:mes|semana))|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:(?:para|pra) )?(?:hoje|amanha)\b"
                 ),
                 0.96,
                 "agenda-query",
+            ),
+            _IntentRule(
+                IntentName.MEDIA_FAVORITES,
+                re.compile(
+                    r"^(?:abra|abre|abrir)\s+(?:(?:o|a)\s+)?(?:spotify|esportes? pai|esporte fai|esportifai|spot fai|spot fire)\s+e\s+(?:pode\s+)?(?:toca|tocar|toque|coloca|colocar|coloque)\s+(?:as\s+)?(?:minhas\s+)?(?:(?:musicas?|cancoes?)\s+)?(?:favoritas|curtidas)$"
+                ),
+                0.999,
+                "media-open-favorites",
             ),
             _IntentRule(
                 IntentName.APP_OPEN,

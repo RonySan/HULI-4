@@ -38,6 +38,7 @@ _CANONICAL_APPLICATION_NAMES = {
 
 _SPOKEN_APPLICATION_ALIASES = {
     "esporte pai": "spotify",
+    "esportes pai": "spotify",
     "esporte fai": "spotify",
     "esportifai": "spotify",
     "spot fai": "spotify",

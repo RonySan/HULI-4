@@ -152,6 +152,40 @@ def test_incomplete_command_waits_before_rearming() -> None:
         listener.stop()
 
 
+def test_repeated_incomplete_calls_pause_listener_instead_of_spamming() -> None:
+    service = FakeService(
+        wake=["huli", "huli", "huli"],
+        commands=[
+            VoiceTimeoutError("silêncio"),
+            VoiceTimeoutError("silêncio"),
+            VoiceTimeoutError("silêncio"),
+        ],
+    )
+    listener = WakeWordListener(
+        service,
+        cycle_timeout=2,
+        command_timeout=8,
+        rearm_delay=0,
+        rearm_waiter=lambda _seconds: None,
+    )
+    listener.start()
+    try:
+        deadline = time.monotonic() + 1
+        received = []
+        while listener.enabled and time.monotonic() < deadline:
+            event = listener.get_event()
+            if event is not None:
+                received.append(event)
+            time.sleep(0.005)
+        while (event := listener.get_event()) is not None:
+            received.append(event)
+        assert listener.enabled is False
+        assert sum("não recebi um comando" in event.text for event in received) == 1
+        assert any("pausada" in event.text for event in received)
+    finally:
+        listener.stop()
+
+
 def test_typing_prevents_background_recognition_until_keyboard_is_released():
     service = FakeService(wake=["huli que horas são"])
     listener = WakeWordListener(service, cycle_timeout=2, command_timeout=8)

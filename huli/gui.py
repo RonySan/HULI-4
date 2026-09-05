@@ -410,6 +410,12 @@ class HuliPanel:
                 return
 
             intent = self.runtime.intents.classify(text).intent.value
+            if from_wake and intent == "unknown":
+                self._append(
+                    "Huli",
+                    "Não entendi o comando completo. Espere ‘Estou ouvindo’ e fale novamente um pouco mais devagar.",
+                )
+                return
             if from_wake and _wake_requires_confirmation(intent):
                 self.pending_wake_command = (text, time.monotonic() + 30)
                 self._append(
@@ -685,6 +691,10 @@ class HuliPanel:
                 else:
                     message = event.text.removeprefix("Huli: ")
                     self._append("Sistema", message)
+                    if not self.wake.enabled:
+                        self.wake_button.configure(text="🎙 Escuta contínua: desligada")
+                        self.listen_button.configure(state="normal")
+                        self.status_var.set("Escuta contínua pausada")
                 event = self.wake.get_event()
         self.root.after(60, self._poll_wake)
 

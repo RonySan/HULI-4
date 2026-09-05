@@ -47,7 +47,21 @@ class AgendaSkill:
             words = set(re.findall(r"\w+", normalized))
             reference = self.agenda.now()
             period = next((word for word in ("manha", "tarde", "noite") if word in words), None)
-            if "amanha" in normalized or "hoje" in normalized or period or normalized in {
+            month_query = "mes" in words
+            week_query = "semana" in words
+            if month_query:
+                start = reference.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                end = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+                items = self.agenda.between(start, end)
+                empty_message = "Não há compromissos neste mês."
+                heading = "Compromissos deste mês:"
+            elif week_query:
+                start = (reference - timedelta(days=reference.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+                end = start + timedelta(days=7)
+                items = self.agenda.between(start, end)
+                empty_message = "Não há compromissos nesta semana."
+                heading = "Compromissos desta semana:"
+            elif "amanha" in normalized or "hoje" in normalized or period or normalized in {
                 "agenda",
                 "agendas",
                 "minha agenda",

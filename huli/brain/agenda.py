@@ -41,6 +41,11 @@ class AgendaService:
         reference = (now or self.now()).astimezone(self.timezone)
         return self.repository.list_upcoming(reference, limit=limit)
 
+    def between(self, start_at: datetime, end_at: datetime, *, limit: int = 50) -> tuple[AppointmentRecord, ...]:
+        start = start_at.astimezone(self.timezone)
+        end = end_at.astimezone(self.timezone)
+        return self.repository.list_between(start, end, limit=limit)
+
     def cancel(self, identifier: str) -> AppointmentRecord | None:
         appointment = self.repository.cancel(identifier)
         if appointment is not None:

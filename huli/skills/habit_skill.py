@@ -76,7 +76,7 @@ class HabitSkill:
                     break
         else:
             value = re.sub(
-                r"^(?:crie|criar|adicione|adicionar|cadastre|cadastrar)\s+(?:um\s+)?h[aá]bito\s*[:\-]?\s*",
+                r"^(?:crie|criar|adicione|adicionar|cadastre|cadastrar)\s+(?:um\s+)?h[aá]bitos?\s+(?:para\s+)?",
                 "",
                 value,
                 flags=re.IGNORECASE,
