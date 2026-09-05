@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.17`
+- **Versão:** `4.0.0-alpha.18`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
@@ -136,6 +136,11 @@ enviar os dados para serviços externos.
 A `alpha.17` acrescenta hábitos com acompanhamento semanal, sessões de foco,
 escolha objetiva da próxima prioridade e avisos automáticos da agenda quinze
 minutos antes. Os avisos funcionam enquanto a Huli estiver aberta.
+
+A `alpha.18` melhora comandos observados no uso real: agenda do mês ou da
+semana, números falados na calculadora, hábitos no plural e abertura do Spotify
+com reprodução das favoritas na mesma frase. A escuta contínua agora aumenta o
+intervalo após chamados incompletos e pausa após três repetições, evitando spam.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
