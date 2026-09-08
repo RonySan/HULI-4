@@ -18,8 +18,20 @@ def normalize(value: str) -> str:
 
 def strip_huli_prefix(text: str) -> str:
     value = str(text or "").strip()
+    value = re.sub(
+        r"^\s*(?:huli|ruli|ruly|ru[\s-]+li)\s*[,;:!?]?\s*",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    ).strip()
+    value = re.sub(
+        r"^(?:(?:por\s+favor|por\s+gentileza|voc[eê]\s+pode|pode\s+por\s+favor|pode)\s*[,;:]?\s+)+",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    ).strip()
     return re.sub(
-        r"^\s*huli\s*[,;:]?\s*",
+        r"^\s*(?:huli|ruli|ruly|ru[\s-]+li)\s*[,;:!?]?\s*",
         "",
         value,
         flags=re.IGNORECASE,

@@ -13,6 +13,11 @@ if not exist ".venv\Scripts\python.exe" (
     pause
     exit /b 1
 )
+".venv\Scripts\python.exe" huli_preflight.py --voice
+if errorlevel 1 (
+    pause
+    exit /b 1
+)
 echo Huli local: ativacao por "Huli" e teclado ao mesmo tempo apos seu login.
 echo Digite normalmente; use "pausar ativacao" para desligar o microfone.
 ".venv\Scripts\python.exe" main.py

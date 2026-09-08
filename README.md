@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.20`
+- **Versão:** `4.0.0-alpha.21`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
-- **Branch de desenvolvimento:** `phase-9-voice-staging`
+- **Branch de desenvolvimento:** `stabilization-alpha21`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -64,7 +64,7 @@ EventBus + SQLite
         └── diário: AES-256-GCM + índice cego
 
 Interface local (Windows)
-  ├── microfone → PocketSphinx/Vosk → Kernel
+  ├── microfone → PocketSphinx + Whisper/Vosk → Kernel
   └── KernelResponse → System.Speech → alto-falante
 ```
 
@@ -75,8 +75,11 @@ de domínio. OpenAI e Ollama continuam fora desta fase.
 ## Capacidades atuais
 
 - `system.status`
+- `computer.health`
+- `calculator.query`
 - `time.query`
 - `date.query`
+- `morning.briefing`
 - `agenda.query`
 - `agenda.create`
 - `agenda.cancel`
@@ -91,6 +94,18 @@ de domínio. OpenAI e Ollama continuam fora desta fase.
 - `task.create`
 - `task.list`
 - `task.complete`
+- `shopping.add`
+- `shopping.list`
+- `shopping.complete`
+- `timer.create`
+- `timer.list`
+- `timer.cancel`
+- `habit.create`
+- `habit.list`
+- `habit.complete`
+- `focus.start`
+- `focus.next`
+- `daily.summary`
 - `smalltalk`
 - `conversation.recap`
 - `journal.create`
@@ -153,6 +168,12 @@ e não é mais encerrado no primeiro fragmento como “pode” ou “abrir”. A
 Huli/Ruli continua usando o detector fonético leve, e o Vosk permanece como
 contingência automática.
 
+A `alpha.21` estabiliza a abertura da Huli e a compreensão de pedidos naturais.
+Os inicializadores verificam as dependências antes de abrir e mostram uma
+orientação curta de reparo em vez de um traceback. “Huli”, “Ruli” e “Ru-li” são
+aceitos como vocativo, inclusive em pedidos educados como “Ruli, por favor abra
+a calculadora”, sem confundir palavras comuns com o nome da assistente.
+
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
 
@@ -185,6 +206,7 @@ e voz offline. Consulte [instruções e limites](docs/CORRECOES_2026_08_31.md).
 - `INICIAR_HULI.bat`: iniciar pelo teclado.
 - `INICIAR_PAINEL.bat`: abrir o painel com botões de voz.
 - `INICIAR_COM_VOZ.bat`: falar e ouvir no modo proprietário local.
+- `VERIFICAR_HULI.bat`: conferir instalação, voz e modelos sem abrir o painel.
 - `TESTAR_VOZ.bat`: teste real sem executar comandos nem acessar dados pessoais.
 - `INSTALAR_VOZ_LOCAL.bat`: dependências opcionais e modelo português oficial.
 - `INSTALAR_VOZ_MELHORADA.bat`: Whisper Small local para maior precisão em pt-BR.

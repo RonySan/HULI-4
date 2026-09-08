@@ -509,25 +509,68 @@ class IntentEngine:
                 normalized,
                 {"matched_rule": "empty"},
             )
-        normalized = re.sub(r"^huli\s+", "", normalized).strip()
-        if re.fullmatch(r"como (?:vai|esta|ta)(?: voce|vc)?(?: huli)?", normalized):
-            return IntentMatch(IntentName.SMALL_TALK, 0.97, normalized, {"matched_rule": "social-how-are-you"})
-        if re.search(r"\bo que (?:eu )?(?:tenho|temos) (?:pra|para) (?:hoje|amanha|esta tarde|essa tarde)\b", normalized):
-            return IntentMatch(IntentName.AGENDA_QUERY, 0.97, normalized, {"matched_rule": "natural-agenda-period"})
-        for rule in self._rules:
-            if rule.name == "task-complete-natural" and "?" in text:
-                continue
-            match = rule.pattern.search(normalized)
-            if match:
-                metadata = {"matched_rule": rule.name}
-                metadata.update(
-                    {
-                        key: value
-                        for key, value in match.groupdict().items()
-                        if value is not None
-                    }
+        # O nome é vocativo, não parte do comando. Aceitar somente as formas
+        # reais evita transformar palavras comuns ("olhe", "link") no nome.
+        vocative = r"(?:huli|ruli|ruly|ru li)"
+        normalized = re.sub(rf"^{vocative}\s+", "", normalized).strip()
+        # Pedidos educados são enquadramento da frase e não uma intenção.
+        # A remoção é limitada ao começo para não alterar títulos ou conteúdo.
+        normalized = re.sub(
+            r"^(?:(?:por favor|por gentileza|voce pode|pode por favor|pode)\s+)+",
+            "",
+            normalized,
+        ).strip()
+        normalized = re.sub(rf"^{vocative}\s+", "", normalized).strip()
+        candidates = [normalized]
+        without_trailing_vocative = re.sub(
+            rf"\s+{vocative}$",
+            "",
+            normalized,
+        ).strip()
+        if without_trailing_vocative and without_trailing_vocative != normalized:
+            candidates.append(without_trailing_vocative)
+
+        for candidate in candidates:
+            if re.fullmatch(
+                r"como (?:vai|esta|ta)(?: voce|vc)?(?: huli)?",
+                candidate,
+            ):
+                return IntentMatch(
+                    IntentName.SMALL_TALK,
+                    0.97,
+                    candidate,
+                    {"matched_rule": "social-how-are-you"},
                 )
-                return IntentMatch(rule.intent, rule.confidence, normalized, metadata)
+            if re.search(
+                r"\bo que (?:eu )?(?:tenho|temos) (?:pra|para) "
+                r"(?:hoje|amanha|esta tarde|essa tarde)\b",
+                candidate,
+            ):
+                return IntentMatch(
+                    IntentName.AGENDA_QUERY,
+                    0.97,
+                    candidate,
+                    {"matched_rule": "natural-agenda-period"},
+                )
+            for rule in self._rules:
+                if rule.name == "task-complete-natural" and "?" in text:
+                    continue
+                match = rule.pattern.search(candidate)
+                if match:
+                    metadata = {"matched_rule": rule.name}
+                    metadata.update(
+                        {
+                            key: value
+                            for key, value in match.groupdict().items()
+                            if value is not None
+                        }
+                    )
+                    return IntentMatch(
+                        rule.intent,
+                        rule.confidence,
+                        candidate,
+                        metadata,
+                    )
         return IntentMatch(
             IntentName.UNKNOWN,
             0.0,

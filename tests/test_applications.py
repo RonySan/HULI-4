@@ -129,6 +129,8 @@ def test_application_skill_extracts_and_opens_by_name(tmp_path: Path) -> None:
     assert response.text == "Abrindo Google Chrome."
     assert opened == [str(chrome.resolve())]
     assert extract_application_name("Huli, abra o aplicativo Paint") == "Paint"
+    assert extract_application_name("Ruli, por favor abra a calculadora") == "calculadora"
+    assert extract_application_name("abra o Spotify Huli") == "Spotify"
     assert extract_application_name("abrir o esporte pai") == "esporte pai"
 
 

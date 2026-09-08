@@ -25,6 +25,10 @@ def _restart_with_project_python() -> None:
 
 _restart_with_project_python()
 
+from huli_preflight import ensure_core  # noqa: E402
+
+ensure_core()
+
 from huli.gui import main  # noqa: E402
 
 

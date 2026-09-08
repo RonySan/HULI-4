@@ -10,5 +10,10 @@ if not exist ".venv\Scripts\pythonw.exe" (
     pause
     exit /b 1
 )
+".venv\Scripts\python.exe" huli_preflight.py
+if errorlevel 1 (
+    pause
+    exit /b 1
+)
 start "Huli" ".venv\Scripts\pythonw.exe" painel.py
 endlocal

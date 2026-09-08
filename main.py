@@ -37,6 +37,10 @@ def _restart_with_project_python() -> None:
 
 _restart_with_project_python()
 
+from huli_preflight import ensure_core
+
+ensure_core()
+
 from dataclasses import dataclass, field
 from getpass import getpass
 from uuid import uuid4

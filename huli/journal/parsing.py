@@ -19,10 +19,16 @@ class JournalDraft:
 
 
 def strip_huli_prefix(text: str) -> str:
-    return re.sub(
-        r"^\s*huli\s*[,;:]?\s*",
+    value = re.sub(
+        r"^\s*(?:huli|ruli|ruly|ru[\s-]+li)\s*[,;:!?]?\s*",
         "",
         str(text or "").strip(),
+        flags=re.IGNORECASE,
+    ).strip()
+    return re.sub(
+        r"^(?:(?:por\s+favor|por\s+gentileza|voc[eê]\s+pode|pode\s+por\s+favor|pode)\s*[,;:]?\s+)+",
+        "",
+        value,
         flags=re.IGNORECASE,
     ).strip()
 
