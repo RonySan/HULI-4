@@ -42,6 +42,7 @@ class Settings:
     voice_volume: int = 100
     voice_input_provider: str = "auto"
     voice_model_path: Path = APP_ROOT / "models" / "vosk-pt"
+    voice_whisper_model_path: Path = APP_ROOT / "models" / "whisper-small"
     voice_input_device: str | int | None = None
     voice_input_gain: float = 1.8
     voice_start_listening: bool = False
@@ -62,6 +63,11 @@ class Settings:
     def __post_init__(self) -> None:
         object.__setattr__(self, "data_dir", app_path(self.data_dir))
         object.__setattr__(self, "voice_model_path", app_path(self.voice_model_path))
+        object.__setattr__(
+            self,
+            "voice_whisper_model_path",
+            app_path(self.voice_whisper_model_path),
+        )
 
 
 def load_settings(source: Mapping[str, str] | None = None) -> Settings:
@@ -121,8 +127,10 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
     voice_rate = _read_int(values, "HULI_VOICE_RATE", 0, minimum=-10, maximum=10)
     voice_volume = _read_int(values, "HULI_VOICE_VOLUME", 100, minimum=0, maximum=100)
     voice_input_provider = values.get("HULI_VOICE_INPUT_PROVIDER", "auto").strip().lower()
-    if voice_input_provider not in {"auto", "vosk", "windows"}:
-        raise ValueError("HULI_VOICE_INPUT_PROVIDER deve ser auto, vosk ou windows.")
+    if voice_input_provider not in {"auto", "whisper", "vosk", "windows"}:
+        raise ValueError(
+            "HULI_VOICE_INPUT_PROVIDER deve ser auto, whisper, vosk ou windows."
+        )
     raw_device = values.get("HULI_VOICE_INPUT_DEVICE", "").strip()
     voice_input_device = int(raw_device) if raw_device.isdigit() else raw_device or None
     voice_input_gain = _read_float(
@@ -155,6 +163,9 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         voice_volume=voice_volume,
         voice_input_provider=voice_input_provider,
         voice_model_path=app_path(values.get("HULI_VOICE_MODEL_PATH", "models/vosk-pt")),
+        voice_whisper_model_path=app_path(
+            values.get("HULI_VOICE_WHISPER_MODEL_PATH", "models/whisper-small")
+        ),
         voice_input_device=voice_input_device,
         voice_input_gain=voice_input_gain,
         voice_start_listening=_read_bool(values, "HULI_VOICE_START_LISTENING", False),

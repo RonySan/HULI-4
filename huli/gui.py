@@ -82,6 +82,7 @@ class HuliPanel:
             volume=settings.voice_volume,
             input_provider=settings.voice_input_provider,
             model_path=settings.voice_model_path,
+            whisper_model_path=settings.voice_whisper_model_path,
             input_device=settings.voice_input_device,
             input_gain=settings.voice_input_gain,
         )

@@ -24,6 +24,7 @@ from huli.voice.transcript import (
     normalize_spoken_vocative,
     resolve_safe_voice_query,
 )
+from huli.voice.whisper import FasterWhisperInput
 
 
 def amplify_pcm16(block: bytes, gain: float) -> bytes:
@@ -35,6 +36,39 @@ def amplify_pcm16(block: bytes, gain: float) -> bytes:
     for index, sample in enumerate(samples):
         samples[index] = max(-32_768, min(32_767, round(sample * gain)))
     return samples.tobytes()
+
+
+_INCOMPLETE_VOICE_FRAGMENTS = {
+    "abra",
+    "abre",
+    "abrir",
+    "adicionar",
+    "agenda para",
+    "cancelar",
+    "como",
+    "concluir",
+    "criar",
+    "eu quero",
+    "lembre",
+    "marcar",
+    "me",
+    "me lembre",
+    "pode",
+    "por favor",
+    "qual",
+    "quando",
+    "quero",
+    "tocar",
+    "toque",
+}
+
+
+def is_incomplete_voice_fragment(text: str) -> bool:
+    """Identifica começos que não devem encerrar a captura da frase."""
+    normalized = normalize_text(text)
+    return normalized in _INCOMPLETE_VOICE_FRAGMENTS or normalized.endswith(
+        (" e", " para", " do", " da", " de")
+    )
 
 
 class PhoneticWakeInput:
@@ -307,6 +341,7 @@ class VoskInput:
             recognizer.SetWords(True)
             deadline = time.monotonic() + timeout
             pending_vocative: str | None = None
+            fragments: list[str] = []
             with sd.RawInputStream(samplerate=rate, blocksize=max(1, rate // 5),
                                    device=self.device, dtype="int16", channels=1, callback=receive):
                 while time.monotonic() < deadline:
@@ -333,10 +368,23 @@ class VoskInput:
                                 continue
                             if pending_vocative:
                                 text = f"{pending_vocative} {text}"
-                            return normalize_spoken_vocative(text) if normalize_transcript else text
+                                pending_vocative = None
+                            fragments.append(text)
+                            combined = " ".join(fragments)
+                            if is_incomplete_voice_fragment(combined):
+                                continue
+                            return (
+                                normalize_spoken_vocative(combined)
+                                if normalize_transcript
+                                else combined
+                            )
             # Uma frase cortada pelo limite nunca vira um comando executável.
             if pending_vocative:
                 raise VoiceTimeoutError("Só entendi o chamado, sem a pergunta completa. Voltando ao teclado; use ouvir para tentar novamente.")
+            if fragments:
+                raise VoiceTimeoutError(
+                    "A frase parece ter sido cortada. Espere ‘Estou ouvindo’ e repita o comando completo."
+                )
             raise VoiceTimeoutError("Não recebi uma frase completa. Voltando ao teclado; diga mais perto do microfone ou aumente o tempo de escuta.")
         except (VoiceError, KeyboardInterrupt):
             raise
@@ -349,7 +397,8 @@ class VoskInput:
 class LocalVoiceBackend:
     def __init__(self, *, language: str = "pt-BR", input_provider: str = "auto",
                  model_path: Path | None = None, input_device: str | int | None = None,
-                 input_gain: float = 1.0) -> None:
+                 input_gain: float = 1.0,
+                 whisper_model_path: Path | None = None) -> None:
         from huli.infrastructure.config import APP_ROOT
 
         self.language = language
@@ -358,6 +407,11 @@ class LocalVoiceBackend:
         self.input_gain = input_gain
         self.vosk = VoskInput(
             model_path or APP_ROOT / "models" / "vosk-pt",
+            input_device,
+            input_gain=input_gain,
+        )
+        self.whisper = FasterWhisperInput(
+            whisper_model_path or APP_ROOT / "models" / "whisper-small",
             input_device,
             input_gain=input_gain,
         )
@@ -370,50 +424,78 @@ class LocalVoiceBackend:
         native = self.synthesis.capabilities()
         if self.input_provider == "windows":
             return native
-        try:
-            if self.language.casefold() != "pt-br":
-                raise VoiceUnavailableError("O modelo Vosk configurado é pt-BR.")
-            microphone = self.vosk.check()
+        if self.language.casefold() != "pt-br":
+            return VoiceCapabilities(
+                native.output_available,
+                False,
+                "windows-tts+local-offline",
+                f"{native.detail} Os modelos locais estão configurados para pt-BR.",
+            )
+        failures: list[str] = []
+        for provider, engine, label in self._local_candidates():
             try:
-                self.phonetic_wake.check()
-                wake_detail = " Detector fonético Huli/Ruli: pronto."
+                microphone = engine.check()
+                try:
+                    self.phonetic_wake.check()
+                    wake_detail = " Detector fonético Huli/Ruli: pronto."
+                except VoiceError as exc:
+                    wake_detail = f" Detector fonético: {exc}"
+                return VoiceCapabilities(
+                    native.output_available,
+                    True,
+                    provider,
+                    f"{native.detail} Escuta {label}: pronta; microfone: {microphone}; "
+                    f"ganho: {self.input_gain:.1f}x.{wake_detail}",
+                )
             except VoiceError as exc:
-                wake_detail = f" Detector fonético: {exc}"
-            return VoiceCapabilities(native.output_available, True, "windows-tts+vosk-offline", f"{native.detail} Escuta Vosk: pronta para teste; microfone: {microphone}; ganho: {self.input_gain:.1f}x.{wake_detail}")
-        except VoiceError as exc:
-            if self.input_provider == "auto" and native.input_available:
-                return native
-            return VoiceCapabilities(native.output_available, False, "windows-tts+vosk-offline", f"{native.detail} Escuta Vosk: {exc}")
+                failures.append(f"{label}: {exc}")
+        if self.input_provider == "auto" and native.input_available:
+            return native
+        detail = "; ".join(failures) or "nenhum reconhecedor local configurado"
+        return VoiceCapabilities(
+            native.output_available,
+            False,
+            "windows-tts+local-offline",
+            f"{native.detail} Escuta local indisponível: {detail}",
+        )
+
+    def _local_candidates(self):
+        if self.input_provider == "whisper":
+            return (("windows-tts+whisper-offline", self.whisper, "Whisper local"),)
+        if self.input_provider == "vosk":
+            return (("windows-tts+vosk-offline", self.vosk, "Vosk"),)
+        return (
+            ("windows-tts+whisper-offline", self.whisper, "Whisper local"),
+            ("windows-tts+vosk-offline", self.vosk, "Vosk"),
+        )
+
+    def _selected_input(self):
+        capabilities = self.capabilities()
+        if not capabilities.input_available:
+            raise VoiceUnavailableError(capabilities.detail)
+        if capabilities.provider == "windows-system-speech":
+            return self.synthesis
+        if capabilities.provider == "windows-tts+whisper-offline":
+            return self.whisper
+        return self.vosk
 
     def speak(self, text: str, *, language: str, rate: int, volume: int) -> None:
         self.synthesis.speak(text, language=language, rate=rate, volume=volume)
 
     def prepare_input(self) -> None:
-        capabilities = self.capabilities()
-        if not capabilities.input_available:
-            raise VoiceUnavailableError(capabilities.detail)
-        if capabilities.provider == "windows-tts+vosk-offline":
-            self.vosk.prepare()
+        engine = self._selected_input()
+        prepare = getattr(engine, "prepare", None)
+        if prepare is not None:
+            prepare()
 
     def listen_once(self, *, language: str, timeout: int) -> str:
-        capabilities = self.capabilities()
-        if not capabilities.input_available:
-            raise VoiceUnavailableError(capabilities.detail)
-        if capabilities.provider == "windows-system-speech":
-            return self.synthesis.listen_once(language=language, timeout=timeout)
-        return self.vosk.listen_once(language=language, timeout=timeout)
+        return self._selected_input().listen_once(language=language, timeout=timeout)
 
     def listen_cancelable(self, *, language: str, timeout: int, cancel_event) -> str:
-        capabilities = self.capabilities()
-        if not capabilities.input_available:
-            raise VoiceUnavailableError(capabilities.detail)
-        if capabilities.provider == "windows-system-speech":
-            return self.synthesis.listen_once(language=language, timeout=timeout)
-        return self.vosk.listen_once(
-            language=language,
-            timeout=timeout,
-            cancel_event=cancel_event,
-        )
+        engine = self._selected_input()
+        if engine is self.synthesis:
+            return engine.listen_once(language=language, timeout=timeout)
+        return engine.listen_once(language=language, timeout=timeout, cancel_event=cancel_event)
 
     def listen_wake_once(
         self,

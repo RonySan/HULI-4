@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 set PYTHONUTF8=1
-set HULI_VOICE_INPUT_PROVIDER=vosk
+set HULI_VOICE_INPUT_PROVIDER=auto
 set HULI_VOICE_INPUT_TIMEOUT=20
 if not exist ".venv\Scripts\pythonw.exe" (
     echo Ambiente Python da Huli nao encontrado.

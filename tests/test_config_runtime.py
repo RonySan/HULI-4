@@ -29,6 +29,8 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_VOICE_RATE": "1",
             "HULI_VOICE_VOLUME": "90",
             "HULI_VOICE_INPUT_GAIN": "2,25",
+            "HULI_VOICE_INPUT_PROVIDER": "whisper",
+            "HULI_VOICE_WHISPER_MODEL_PATH": str(tmp_path / "whisper"),
             "HULI_VOICE_WAKE_REARM_DELAY": "2,5",
             "HULI_AGENDA_REMINDER_MINUTES": "20",
             "HULI_AGENDA_REMINDER_POLL_SECONDS": "45",
@@ -54,6 +56,8 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.voice_rate == 1
     assert settings.voice_volume == 90
     assert settings.voice_input_gain == 2.25
+    assert settings.voice_input_provider == "whisper"
+    assert settings.voice_whisper_model_path == tmp_path / "whisper"
     assert settings.voice_wake_rearm_delay == 2.5
     assert settings.agenda_reminder_minutes == 20
     assert settings.agenda_reminder_poll_seconds == 45
@@ -82,6 +86,8 @@ def test_load_settings_rejects_invalid_voice_values() -> None:
         load_settings({"HULI_VOICE_INPUT_GAIN": "5"})
     with pytest.raises(ValueError, match="HULI_VOICE_WAKE_REARM_DELAY"):
         load_settings({"HULI_VOICE_WAKE_REARM_DELAY": "11"})
+    with pytest.raises(ValueError, match="HULI_VOICE_INPUT_PROVIDER"):
+        load_settings({"HULI_VOICE_INPUT_PROVIDER": "nuvem"})
 
 
 def test_load_settings_rejects_invalid_weather_coordinates() -> None:

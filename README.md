@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.19`
+- **Versão:** `4.0.0-alpha.20`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
 - **Branch de desenvolvimento:** `phase-9-voice-staging`
@@ -147,6 +147,12 @@ execução vazios do Windows. “Spotify”, “esporte pai” e “esportes pai
 primeiro uma instalação real; quando ela não existe, a Huli abre com segurança o
 Spotify Web. O mesmo fallback atende ao pedido de tocar as músicas favoritas.
 
+A `alpha.20` melhora a compreensão de voz com Whisper Small executado localmente.
+O comando é capturado até uma pausa real, recebe contexto de vocabulário da Huli
+e não é mais encerrado no primeiro fragmento como “pode” ou “abrir”. A ativação
+Huli/Ruli continua usando o detector fonético leve, e o Vosk permanece como
+contingência automática.
+
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
 
@@ -181,9 +187,11 @@ e voz offline. Consulte [instruções e limites](docs/CORRECOES_2026_08_31.md).
 - `INICIAR_COM_VOZ.bat`: falar e ouvir no modo proprietário local.
 - `TESTAR_VOZ.bat`: teste real sem executar comandos nem acessar dados pessoais.
 - `INSTALAR_VOZ_LOCAL.bat`: dependências opcionais e modelo português oficial.
+- `INSTALAR_VOZ_MELHORADA.bat`: Whisper Small local para maior precisão em pt-BR.
 
-A escuta usa Vosk local quando configurado. A fala continua usando a voz pt-BR
-instalada no Windows. A configuração distingue fala, escuta e teste acústico.
+A escuta usa Whisper Small local quando instalado e Vosk como contingência. A
+fala continua usando a voz pt-BR instalada no Windows. A configuração distingue
+fala, escuta e teste acústico.
 
 ## Voz local — fundação original alpha.13
 

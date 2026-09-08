@@ -264,6 +264,7 @@ class VoiceService:
         volume: int = 100,
         input_provider: str = "auto",
         model_path: Path | None = None,
+        whisper_model_path: Path | None = None,
         input_device: str | int | None = None,
         input_gain: float = 1.0,
     ) -> VoiceService:
@@ -272,7 +273,8 @@ class VoiceService:
         return cls(
             LocalVoiceBackend(language=language, input_provider=input_provider,
                               model_path=model_path, input_device=input_device,
-                              input_gain=input_gain),
+                              input_gain=input_gain,
+                              whisper_model_path=whisper_model_path),
             language=language,
             input_timeout=input_timeout,
             rate=rate,

@@ -20,16 +20,20 @@ def main() -> int:
     service = VoiceService.local_default(language=settings.voice_language, input_timeout=20,
         rate=settings.voice_rate, volume=settings.voice_volume,
         input_provider=settings.voice_input_provider, model_path=settings.voice_model_path,
-        input_device=settings.voice_input_device)
+        whisper_model_path=settings.voice_whisper_model_path,
+        input_device=settings.voice_input_device, input_gain=settings.voice_input_gain)
     try:
         capabilities = service.capabilities()
         print(capabilities.detail, flush=True)
         if not capabilities.output_available or not capabilities.input_available:
             print("CONFIGURAÇÃO INCOMPLETA: fala e escuta precisam estar disponíveis.")
             return 1
-        if capabilities.provider == "windows-tts+vosk-offline":
+        if capabilities.provider == "windows-tts+whisper-offline":
+            service.backend.whisper.prepare()
+            print("Modelo Whisper português carregado localmente.", flush=True)
+        elif capabilities.provider == "windows-tts+vosk-offline":
             service.backend.vosk.prepare()
-            print("Modelo português carregado localmente.", flush=True)
+            print("Modelo Vosk português carregado localmente.", flush=True)
         if args.speak:
             service.speak("Olá, Rony. Minha voz está pronta. Vamos testar a escuta em português.")
             print("Síntese executada. Confirme se você ouviu a frase.", flush=True)

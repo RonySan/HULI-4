@@ -15,6 +15,7 @@ from huli.voice.local import (
     VoskInput,
     amplify_pcm16,
 )
+from huli.voice.whisper import FasterWhisperInput
 from huli.voice.transcript import is_spoken_vocative, normalize_spoken_vocative
 
 
@@ -287,6 +288,79 @@ def test_pause_after_name_keeps_same_stream_for_question(tmp_path, monkeypatch, 
     backend, state = fake_input(tmp_path, monkeypatch, transcripts=phrases)
     assert backend.listen_once(language="pt-BR", timeout=2) == expected
     assert state == {"closed": True, "blocks": len(phrases), "opened": 1}
+
+
+def test_vosk_joins_an_incomplete_first_fragment(tmp_path, monkeypatch):
+    backend, state = fake_input(
+        tmp_path,
+        monkeypatch,
+        transcripts=["pode", "tocar minhas favoritas"],
+    )
+
+    assert backend.listen_once(language="pt-BR", timeout=2) == (
+        "pode tocar minhas favoritas"
+    )
+    assert state == {"closed": True, "blocks": 2, "opened": 1}
+
+
+def test_whisper_captures_until_silence_and_transcribes_in_portuguese(
+    tmp_path,
+    monkeypatch,
+):
+    for name in ("model.bin", "config.json", "tokenizer.json"):
+        (tmp_path / name).touch()
+    speech = array("h", [2_500] * 1_600).tobytes()
+    silence = array("h", [0] * 1_600).tobytes()
+    state = {"closed": False, "kwargs": {}, "loaded": False}
+
+    class Model:
+        def transcribe(self, audio, **kwargs):
+            assert audio.read(4) == b"RIFF"
+            state["kwargs"] = kwargs
+            segment = SimpleNamespace(text=" Abrir Spotify. ", avg_logprob=-0.1)
+            return iter((segment,)), SimpleNamespace(language="pt")
+
+    def load_model(path, **kwargs):
+        state["loaded"] = True
+        assert path == str(tmp_path)
+        assert kwargs["compute_type"] == "int8"
+        return Model()
+
+    class Stream:
+        def __init__(self, **kwargs):
+            self.callback = kwargs["callback"]
+
+        def __enter__(self):
+            self.callback(speech, 1_600, None, False)
+            self.callback(speech, 1_600, None, False)
+            for _ in range(12):
+                self.callback(silence, 1_600, None, False)
+            return self
+
+        def __exit__(self, *args):
+            state["closed"] = True
+
+    faster_whisper = SimpleNamespace(WhisperModel=load_model)
+    sounddevice = SimpleNamespace(
+        query_devices=lambda *args: {
+            "default_samplerate": 16_000,
+            "name": "fake microphone",
+        },
+        check_input_settings=lambda **kwargs: None,
+        RawInputStream=Stream,
+    )
+    backend = FasterWhisperInput(tmp_path)
+    monkeypatch.setattr(
+        backend,
+        "_dependencies",
+        lambda: (faster_whisper, sounddevice),
+    )
+
+    assert backend.listen_once(language="pt-BR", timeout=5) == "Abrir Spotify"
+    assert state["loaded"] is True
+    assert state["closed"] is True
+    assert state["kwargs"]["language"] == "pt"
+    assert "Spotify" in state["kwargs"]["initial_prompt"]
 
 
 @pytest.mark.parametrize(("phrases", "accepted", "ticks"), [
