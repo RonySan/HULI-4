@@ -44,3 +44,19 @@ def test_voice_preflight_accepts_complete_local_whisper(
         report,
         include_voice=True,
     )
+
+
+def test_desktop_preflight_reports_missing_component(monkeypatch) -> None:
+    available = huli_preflight._module_available
+    monkeypatch.setattr(
+        huli_preflight,
+        "_module_available",
+        lambda name: False if name == "pystray" else available(name),
+    )
+
+    report = huli_preflight.inspect_installation(include_desktop=True)
+
+    assert not report.ok
+    output = huli_preflight.format_report(report, include_desktop=True)
+    assert "pystray" in output
+    assert "INSTALAR_MODO_RESIDENTE.bat" in output

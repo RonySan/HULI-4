@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.21`
+- **Versão:** `4.0.0-alpha.22`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
-- **Módulo atual:** voz contínua, comandos naturais, mídia e aplicativos
-- **Branch de desenvolvimento:** `stabilization-alpha21`
+- **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
+- **Branch de desenvolvimento:** `resident-mode-alpha22`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -65,7 +65,8 @@ EventBus + SQLite
 
 Interface local (Windows)
   ├── microfone → PocketSphinx + Whisper/Vosk → Kernel
-  └── KernelResponse → System.Speech → alto-falante
+  ├── KernelResponse → System.Speech → alto-falante
+  └── bandeja do Windows → painel, microfone, lembretes e encerramento
 ```
 
 O cérebro local classifica intenções, mantém contexto curto e executa Skills de
@@ -174,6 +175,12 @@ orientação curta de reparo em vez de um traceback. “Huli”, “Ruli” e �
 aceitos como vocativo, inclusive em pedidos educados como “Ruli, por favor abra
 a calculadora”, sem confundir palavras comuns com o nome da assistente.
 
+A `alpha.22` mantém a Huli residente na bandeja do Windows. Fechar ou minimizar
+o painel não encerra a assistente; a escuta contínua, os temporizadores e os
+avisos da agenda continuam ativos. O ícone permite abrir o painel, pausar ou
+retomar o microfone e encerrar a Huli de verdade. A inicialização minimizada com
+o Windows é opcional e pode ser ligada no próprio painel.
+
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
 
@@ -204,12 +211,15 @@ Esta instalação inclui correções de privacidade, sessão, busca de memória,
 e voz offline. Consulte [instruções e limites](docs/CORRECOES_2026_08_31.md).
 
 - `INICIAR_HULI.bat`: iniciar pelo teclado.
-- `INICIAR_PAINEL.bat`: abrir o painel com botões de voz.
+- `INICIAR_PAINEL.bat`: abrir o painel com voz e modo residente.
 - `INICIAR_COM_VOZ.bat`: falar e ouvir no modo proprietário local.
 - `VERIFICAR_HULI.bat`: conferir instalação, voz e modelos sem abrir o painel.
 - `TESTAR_VOZ.bat`: teste real sem executar comandos nem acessar dados pessoais.
 - `INSTALAR_VOZ_LOCAL.bat`: dependências opcionais e modelo português oficial.
 - `INSTALAR_VOZ_MELHORADA.bat`: Whisper Small local para maior precisão em pt-BR.
+- `INSTALAR_MODO_RESIDENTE.bat`: instalar o ícone da bandeja sem alterar dados.
+- `CONFIGURAR_INICIO_WINDOWS.bat`: iniciar a Huli minimizada ao entrar no Windows.
+- `REMOVER_INICIO_WINDOWS.bat`: remover a inicialização automática.
 
 A escuta usa Whisper Small local quando instalado e Vosk como contingência. A
 fala continua usando a voz pt-BR instalada no Windows. A configuração distingue

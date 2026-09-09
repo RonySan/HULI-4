@@ -8,6 +8,19 @@ import subprocess
 import sys
 
 
+def apply_launch_options(argv: list[str]) -> None:
+    """Traduz opções do atalho em configuração antes de construir o runtime."""
+    if "--resident" in argv:
+        os.environ["HULI_DESKTOP_RESIDENT_ENABLED"] = "true"
+        os.environ["HULI_VOICE_WAKE_ENABLED"] = "true"
+        os.environ["HULI_VOICE_AUTO_SPEAK"] = "true"
+    if "--minimized" in argv:
+        os.environ["HULI_DESKTOP_START_MINIMIZED"] = "true"
+
+
+apply_launch_options(sys.argv[1:])
+
+
 def _restart_with_project_python() -> None:
     local_python = Path(__file__).resolve().parent / ".venv" / "Scripts" / "python.exe"
     if not local_python.is_file():

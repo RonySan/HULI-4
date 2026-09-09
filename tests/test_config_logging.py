@@ -15,6 +15,9 @@ def test_load_settings_uses_safe_defaults() -> None:
     assert settings.data_dir == APP_ROOT / "data"
     assert settings.voice_wake_enabled is False
     assert settings.voice_wake_cycle_timeout == 30
+    assert settings.desktop_resident_enabled is True
+    assert settings.desktop_start_minimized is False
+    assert settings.desktop_notifications_enabled is True
 
 
 def test_load_settings_reads_environment_values() -> None:

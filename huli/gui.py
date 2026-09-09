@@ -15,6 +15,13 @@ from huli.brain.normalization import normalize_text
 from huli.brain.agenda_reminders import AgendaReminderAlert
 from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
+from huli.desktop import (
+    AutoStartError,
+    ResidentTray,
+    TrayUnavailableError,
+    WindowsAutoStart,
+)
+from huli.infrastructure.config import APP_ROOT
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
 from huli.voice import (
@@ -99,18 +106,26 @@ class HuliPanel:
         self._wake_was_enabled = False
         self.pending_wake_command: tuple[str, float] | None = None
         self._closed = False
+        self._minimize_notice_shown = False
+        self._tray_status = ""
+        self.tray: ResidentTray | None = None
+        self.autostart = WindowsAutoStart(APP_ROOT)
         self.runtime.timers.subscribe(self._timer_finished)
         self.runtime.agenda_reminders.subscribe(self._agenda_reminder_finished)
 
         root.title(f"{__app_name__} {__version__} — Painel local")
         root.geometry("920x650")
         root.minsize(720, 500)
-        root.protocol("WM_DELETE_WINDOW", self.close)
+        root.protocol("WM_DELETE_WINDOW", self.request_close)
+        root.bind("<Unmap>", self._window_unmapped, add="+")
         if settings.local_login_enabled:
             self._show_login()
         else:
             self.session = PanelSession(settings.local_owner_name, "owner")
             self._show_main()
+        self._start_resident_mode()
+        if settings.desktop_start_minimized:
+            self.root.after(350, self.hide_to_tray)
         self.root.after(60, self._poll_wake)
 
     def _clear(self) -> None:
@@ -187,15 +202,19 @@ class HuliPanel:
         ).pack(side="left")
         self.status_var = tk.StringVar(value="Escuta contínua desligada")
         ttk.Label(top, textvariable=self.status_var).pack(side="left", padx=24)
-        ttk.Button(
-            top,
-            text=(
-                "Sair da sessão"
-                if self.runtime.settings.local_login_enabled
-                else "Fechar"
-            ),
-            command=self.logout,
-        ).pack(side="right")
+        ttk.Button(top, text="Encerrar Huli", command=self.close).pack(side="right")
+        ttk.Button(top, text="Minimizar", command=self.hide_to_tray).pack(
+            side="right",
+            padx=(0, 6),
+        )
+        if self.runtime.settings.local_login_enabled:
+            ttk.Button(top, text="Sair da sessão", command=self.logout).pack(
+                side="right",
+                padx=(0, 6),
+            )
+        self.autostart_button = ttk.Button(top, command=self.toggle_autostart)
+        self.autostart_button.pack(side="right", padx=(0, 6))
+        self._update_autostart_button()
 
         self.transcript = scrolledtext.ScrolledText(
             self.root,
@@ -308,11 +327,122 @@ class HuliPanel:
         except tk.TclError:
             return
 
+    def _start_resident_mode(self) -> None:
+        if not self.runtime.settings.desktop_resident_enabled or self._closed:
+            return
+        self.tray = ResidentTray(
+            schedule=lambda callback: self._safe_after(callback),
+            on_show=self.show_from_tray,
+            on_toggle_wake=self._tray_toggle_wake,
+            on_exit=self.close,
+            wake_enabled=lambda: bool(self.wake and self.wake.enabled),
+        )
+        try:
+            self.tray.start()
+        except TrayUnavailableError as exc:
+            self.tray = None
+            self._append("Sistema", f"Modo residente indisponível: {exc}")
+            return
+        self._sync_resident_status(force=True)
+
+    def _tray_toggle_wake(self) -> None:
+        if self.session is None or self.session.is_guest:
+            self.show_from_tray()
+            return
+        self.toggle_wake()
+
+    def _window_unmapped(self, _event=None) -> None:
+        if self._closed or self.tray is None:
+            return
+        self.root.after(80, self._hide_if_iconic)
+
+    def _hide_if_iconic(self) -> None:
+        if not self._closed and self.root.state() == "iconic":
+            self.hide_to_tray()
+
+    def hide_to_tray(self) -> None:
+        if self._closed:
+            return
+        if self.tray is None or not self.tray.running:
+            self.root.iconify()
+            return
+        self.root.withdraw()
+        if not self._minimize_notice_shown:
+            self.tray.notify(
+                "Continuo ativa na bandeja. Clique no ícone H para abrir o painel.",
+            )
+            self._minimize_notice_shown = True
+
+    def show_from_tray(self) -> None:
+        if self._closed:
+            return
+        self.root.deiconify()
+        self.root.state("normal")
+        self.root.lift()
+        self.root.focus_force()
+        if hasattr(self, "command_entry"):
+            self.command_entry.focus_set()
+
+    def request_close(self) -> None:
+        if self.tray is not None and self.tray.running:
+            self.hide_to_tray()
+            return
+        self.close()
+
+    def _update_autostart_button(self) -> None:
+        if not hasattr(self, "autostart_button"):
+            return
+        if not self.autostart.supported:
+            self.autostart_button.configure(
+                text="Início automático indisponível",
+                state="disabled",
+            )
+            return
+        try:
+            enabled = self.autostart.is_enabled()
+        except AutoStartError:
+            enabled = False
+        self.autostart_button.configure(
+            text=("Inicia com Windows: sim" if enabled else "Inicia com Windows: não"),
+            state="normal",
+        )
+
+    def toggle_autostart(self) -> None:
+        try:
+            if self.autostart.is_enabled():
+                self.autostart.disable()
+                message = "A Huli não iniciará mais automaticamente com o Windows."
+            else:
+                self.autostart.enable()
+                message = "A Huli iniciará minimizada e ouvindo após você entrar no Windows."
+        except AutoStartError as exc:
+            messagebox.showerror("Início automático", str(exc))
+            return
+        self._update_autostart_button()
+        messagebox.showinfo("Início automático", message)
+
+    def _sync_resident_status(self, *, force: bool = False) -> None:
+        if self.tray is None:
+            return
+        if self.calibrating:
+            status = "Huli — calibrando o nome"
+        elif self.listening:
+            status = "Huli — ouvindo um comando"
+        elif self.wake and self.wake.enabled:
+            status = "Huli — escuta contínua ligada"
+        else:
+            status = "Huli — microfone pausado"
+        if force or status != self._tray_status:
+            self._tray_status = status
+            self.tray.update(status)
+
     def _timer_finished(self, alert: TimerAlert) -> None:
         self._safe_after(self._show_timer_alert, alert)
 
     def _show_timer_alert(self, alert: TimerAlert) -> None:
         self._append("Huli", alert.message)
+        if self.runtime.settings.desktop_notifications_enabled and self.tray:
+            self.tray.notify(alert.message, "Temporizador da Huli")
         try:
             if self.voice.service.capabilities().output_available:
                 self.voice.service.speak(alert.message)
@@ -326,6 +456,8 @@ class HuliPanel:
 
     def _show_agenda_reminder(self, alert: AgendaReminderAlert) -> None:
         self._append("Huli", alert.message)
+        if self.runtime.settings.desktop_notifications_enabled and self.tray:
+            self.tray.notify(alert.message, "Lembrete da agenda")
         try:
             if self.voice.service.capabilities().output_available:
                 self.voice.service.speak(alert.message)
@@ -506,6 +638,7 @@ class HuliPanel:
             self.listen_button.configure(state="normal")
             self.status_var.set("Escuta contínua desligada")
             self._append("Sistema", "Escuta contínua desligada. O teclado continua disponível.")
+            self._sync_resident_status(force=True)
             return
 
         try:
@@ -529,6 +662,7 @@ class HuliPanel:
             self.wake = None
             self._append("Sistema", f"Ativação por voz indisponível: {exc}")
             self.status_var.set("Falha ao iniciar escuta contínua")
+            self._sync_resident_status(force=True)
             return
 
         capabilities = self.voice.service.capabilities()
@@ -540,6 +674,7 @@ class HuliPanel:
             "Sistema",
             "Escuta contínua ligada. Diga “Huli” e o comando; você também pode digitar normalmente.",
         )
+        self._sync_resident_status(force=True)
 
     def start_calibration(self) -> None:
         session = self._require_session()
@@ -697,6 +832,7 @@ class HuliPanel:
                         self.listen_button.configure(state="normal")
                         self.status_var.set("Escuta contínua pausada")
                 event = self.wake.get_event()
+        self._sync_resident_status()
         self.root.after(60, self._poll_wake)
 
     def logout(self) -> None:
@@ -726,6 +862,9 @@ class HuliPanel:
         self._closed = True
         self._end_session()
         self.runtime.timers.shutdown()
+        if self.tray:
+            self.tray.stop()
+            self.tray = None
         self.root.destroy()
 
 

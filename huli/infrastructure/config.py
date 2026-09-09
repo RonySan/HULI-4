@@ -51,6 +51,9 @@ class Settings:
     voice_wake_rearm_delay: float = 3.0
     agenda_reminder_minutes: int = 15
     agenda_reminder_poll_seconds: int = 30
+    desktop_resident_enabled: bool = True
+    desktop_start_minimized: bool = False
+    desktop_notifications_enabled: bool = True
 
     @property
     def database_path(self) -> Path:
@@ -197,6 +200,21 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
             30,
             minimum=5,
             maximum=300,
+        ),
+        desktop_resident_enabled=_read_bool(
+            values,
+            "HULI_DESKTOP_RESIDENT_ENABLED",
+            True,
+        ),
+        desktop_start_minimized=_read_bool(
+            values,
+            "HULI_DESKTOP_START_MINIMIZED",
+            False,
+        ),
+        desktop_notifications_enabled=_read_bool(
+            values,
+            "HULI_DESKTOP_NOTIFICATIONS_ENABLED",
+            True,
         ),
     )
 

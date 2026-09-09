@@ -34,6 +34,9 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_VOICE_WAKE_REARM_DELAY": "2,5",
             "HULI_AGENDA_REMINDER_MINUTES": "20",
             "HULI_AGENDA_REMINDER_POLL_SECONDS": "45",
+            "HULI_DESKTOP_RESIDENT_ENABLED": "sim",
+            "HULI_DESKTOP_START_MINIMIZED": "sim",
+            "HULI_DESKTOP_NOTIFICATIONS_ENABLED": "não",
         }
     )
 
@@ -61,6 +64,9 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.voice_wake_rearm_delay == 2.5
     assert settings.agenda_reminder_minutes == 20
     assert settings.agenda_reminder_poll_seconds == 45
+    assert settings.desktop_resident_enabled is True
+    assert settings.desktop_start_minimized is True
+    assert settings.desktop_notifications_enabled is False
     assert settings.database_path == tmp_path / "huli.db"
     assert settings.backup_dir == tmp_path / "backups"
 

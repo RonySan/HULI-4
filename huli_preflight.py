@@ -46,7 +46,11 @@ def _module_available(name: str) -> bool:
         return False
 
 
-def inspect_installation(*, include_voice: bool = False) -> PreflightReport:
+def inspect_installation(
+    *,
+    include_voice: bool = False,
+    include_desktop: bool = False,
+) -> PreflightReport:
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -92,6 +96,19 @@ def inspect_installation(*, include_voice: bool = False) -> PreflightReport:
                 "Whisper melhorado indisponível; a Huli usará o reconhecimento Vosk."
             )
 
+    if include_desktop:
+        missing_desktop = [
+            label
+            for module, label in (("pystray", "pystray"), ("PIL", "Pillow"))
+            if not _module_available(module)
+        ]
+        if missing_desktop:
+            errors.append(
+                "Componentes do modo residente ausentes: "
+                + ", ".join(missing_desktop)
+                + "."
+            )
+
     if not errors:
         try:
             __import__("huli.bootstrap")
@@ -108,13 +125,18 @@ def format_report(
     report: PreflightReport,
     *,
     include_voice: bool = False,
+    include_desktop: bool = False,
 ) -> str:
     if report.ok:
-        lines = [
-            "Huli: instalação principal e voz local verificadas."
-            if include_voice
-            else "Huli: instalação principal verificada."
-        ]
+        if include_voice and include_desktop:
+            message = "Huli: instalação principal, voz local e modo residente verificados."
+        elif include_voice:
+            message = "Huli: instalação principal e voz local verificadas."
+        elif include_desktop:
+            message = "Huli: instalação principal e modo residente verificados."
+        else:
+            message = "Huli: instalação principal verificada."
+        lines = [message]
     else:
         lines = ["Huli: não foi possível iniciar com segurança."]
     lines.extend(f"- ERRO: {item}" for item in report.errors)
@@ -126,6 +148,8 @@ def format_report(
         lines.append(
             "Para voz local, execute também INSTALAR_VOZ_MELHORADA.bat."
         )
+        if include_desktop:
+            lines.append("Para a bandeja, execute INSTALAR_MODO_RESIDENTE.bat.")
     return "\n".join(lines)
 
 
@@ -143,9 +167,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exige também microfone, ativação e um reconhecedor local",
     )
+    parser.add_argument(
+        "--desktop",
+        action="store_true",
+        help="exige também os componentes do modo residente",
+    )
     args = parser.parse_args(argv)
-    report = inspect_installation(include_voice=args.voice)
-    print(format_report(report, include_voice=args.voice))
+    report = inspect_installation(
+        include_voice=args.voice,
+        include_desktop=args.desktop,
+    )
+    print(
+        format_report(
+            report,
+            include_voice=args.voice,
+            include_desktop=args.desktop,
+        )
+    )
     return 0 if report.ok else 1
 
 

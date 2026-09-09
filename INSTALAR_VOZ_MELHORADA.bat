@@ -8,7 +8,7 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 echo Instalando o reconhecimento Whisper local. Nao existe cobranca por uso.
-".venv\Scripts\python.exe" -m pip install -e ".[voice,voice-whisper]"
+".venv\Scripts\python.exe" -m pip install -e ".[voice,voice-whisper,desktop]"
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m tools.install_whisper_model
 if errorlevel 1 goto failed
