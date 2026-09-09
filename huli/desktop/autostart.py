@@ -94,6 +94,7 @@ class WindowsAutoStart:
                 str(self.panel_path),
                 "--resident",
                 "--minimized",
+                "--startup",
             ]
         )
 

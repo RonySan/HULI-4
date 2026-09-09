@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.22`
+- **Versão:** `4.0.0-alpha.23`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
 - **Branch de desenvolvimento:** `resident-mode-alpha22`
@@ -180,6 +180,12 @@ o painel não encerra a assistente; a escuta contínua, os temporizadores e os
 avisos da agenda continuam ativos. O ícone permite abrir o painel, pausar ou
 retomar o microfone e encerrar a Huli de verdade. A inicialização minimizada com
 o Windows é opcional e pode ser ligada no próprio painel.
+
+A `alpha.23` reforça a inicialização automática: o atalho do Windows identifica
+explicitamente a partida automática e a Huli registra localmente se conseguiu
+chegar ao painel ou qual erro a impediu. Execute
+`python -m tools.configure_windows_startup diagnose` para conferir a configuração
+e o último resultado sem abrir a interface.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:

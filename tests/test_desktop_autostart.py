@@ -38,6 +38,7 @@ def test_autostart_round_trip_uses_resident_minimized_command(tmp_path: Path) ->
     assert "pythonw.exe" in autostart.command
     assert "--resident" in autostart.command
     assert "--minimized" in autostart.command
+    assert "--startup" in autostart.command
 
     autostart.disable()
     assert not autostart.is_enabled()
