@@ -104,7 +104,7 @@ def test_agenda_reminder_alerts_once_inside_the_lead_window(tmp_path: Path) -> N
 def test_database_schema_includes_habits(tmp_path: Path) -> None:
     database = SQLiteDatabase(tmp_path / "huli.db")
     database.initialize()
-    assert database.schema_version() == 9
+    assert database.schema_version() == 10
     with database.connect() as connection:
         tables = {
             str(row["name"])

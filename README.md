@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.23`
+- **Versão:** `4.0.0-alpha.24`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
 - **Branch de desenvolvimento:** `resident-mode-alpha22`
@@ -186,6 +186,11 @@ explicitamente a partida automática e a Huli registra localmente se conseguiu
 chegar ao painel ou qual erro a impediu. Execute
 `python -m tools.configure_windows_startup diagnose` para conferir a configuração
 e o último resultado sem abrir a interface.
+
+A `alpha.24` integra o calendário principal do Google em modo somente leitura.
+Depois da autorização oficial do Google, eventos sincronizados aparecem como
+`[Google]` na agenda, resumo diário, briefing e lembretes. A Huli não cria,
+edita ou cancela eventos no Google nesta etapa.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:

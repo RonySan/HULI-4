@@ -21,6 +21,10 @@ _CORE_MODULES = {
     "uvicorn": "uvicorn",
     "tzdata": "tzdata",
 }
+_GOOGLE_CALENDAR_MODULES = {
+    "googleapiclient": "google-api-python-client",
+    "google_auth_oauthlib": "google-auth-oauthlib",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +54,7 @@ def inspect_installation(
     *,
     include_voice: bool = False,
     include_desktop: bool = False,
+    include_google_calendar: bool = False,
 ) -> PreflightReport:
     errors: list[str] = []
     warnings: list[str] = []
@@ -109,6 +114,19 @@ def inspect_installation(
                 + "."
             )
 
+    if include_google_calendar:
+        missing_google = [
+            label
+            for module, label in _GOOGLE_CALENDAR_MODULES.items()
+            if not _module_available(module)
+        ]
+        if missing_google:
+            errors.append(
+                "Componentes do Google Calendar ausentes: "
+                + ", ".join(missing_google)
+                + "."
+            )
+
     if not errors:
         try:
             __import__("huli.bootstrap")
@@ -126,9 +144,14 @@ def format_report(
     *,
     include_voice: bool = False,
     include_desktop: bool = False,
+    include_google_calendar: bool = False,
 ) -> str:
     if report.ok:
-        if include_voice and include_desktop:
+        if include_voice and include_desktop and include_google_calendar:
+            message = "Huli: instalação principal, voz, modo residente e Google Calendar verificados."
+        elif include_google_calendar:
+            message = "Huli: instalação principal e Google Calendar verificados."
+        elif include_voice and include_desktop:
             message = "Huli: instalação principal, voz local e modo residente verificados."
         elif include_voice:
             message = "Huli: instalação principal e voz local verificadas."
@@ -150,6 +173,8 @@ def format_report(
         )
         if include_desktop:
             lines.append("Para a bandeja, execute INSTALAR_MODO_RESIDENTE.bat.")
+        if include_google_calendar:
+            lines.append("Para o Google Calendar, execute INSTALAR_GOOGLE_CALENDAR.bat.")
     return "\n".join(lines)
 
 
@@ -168,6 +193,11 @@ def main(argv: list[str] | None = None) -> int:
         help="exige também microfone, ativação e um reconhecedor local",
     )
     parser.add_argument(
+        "--google-calendar",
+        action="store_true",
+        help="exige também os componentes opcionais do Google Calendar",
+    )
+    parser.add_argument(
         "--desktop",
         action="store_true",
         help="exige também os componentes do modo residente",
@@ -176,12 +206,14 @@ def main(argv: list[str] | None = None) -> int:
     report = inspect_installation(
         include_voice=args.voice,
         include_desktop=args.desktop,
+        include_google_calendar=args.google_calendar,
     )
     print(
         format_report(
             report,
             include_voice=args.voice,
             include_desktop=args.desktop,
+            include_google_calendar=args.google_calendar,
         )
     )
     return 0 if report.ok else 1

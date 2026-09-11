@@ -21,7 +21,8 @@ class DailySummaryService:
             lines.append(f"Hoje você tem {len(appointments)} compromisso(s):")
             for item in appointments:
                 start = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
-                lines.append(f"- #{item.id} {start.strftime('%H:%M')} — {item.title}")
+                origin = " [Google]" if item.source == "google" else ""
+                lines.append(f"- #{item.id}{origin} {start.strftime('%H:%M')} — {item.title}")
         else:
             lines.append("Hoje não há compromissos agendados.")
         if tasks:

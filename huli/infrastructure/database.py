@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
-_SCHEMA_VERSION = 9
+_SCHEMA_VERSION = 10
 
 
 class SQLiteDatabase:
@@ -71,6 +71,9 @@ class SQLiteDatabase:
             if 9 not in applied:
                 self._migration_009_habits(connection)
                 connection.execute("INSERT INTO schema_migrations(version) VALUES (9)")
+            if 10 not in applied:
+                self._migration_010_external_calendar(connection)
+                connection.execute("INSERT INTO schema_migrations(version) VALUES (10)")
 
     def schema_version(self) -> int:
         with self.connect() as connection:
@@ -417,6 +420,21 @@ class SQLiteDatabase:
             );
             CREATE INDEX IF NOT EXISTS idx_habit_completions_date
             ON habit_completions(completion_date, habit_id);
+            """
+        )
+
+    @staticmethod
+    def _migration_010_external_calendar(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            ALTER TABLE appointments ADD COLUMN source TEXT NOT NULL DEFAULT 'local';
+            ALTER TABLE appointments ADD COLUMN external_id TEXT;
+            ALTER TABLE appointments ADD COLUMN calendar_name TEXT;
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_appointments_external_source
+            ON appointments(source, external_id)
+            WHERE external_id IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_appointments_source_status_start
+            ON appointments(source, status, start_at);
             """
         )
 

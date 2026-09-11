@@ -54,6 +54,8 @@ class Settings:
     desktop_resident_enabled: bool = True
     desktop_start_minimized: bool = False
     desktop_notifications_enabled: bool = True
+    google_calendar_credentials_path: Path = APP_ROOT / "credentials" / "google_calendar_oauth.json"
+    google_calendar_sync_days: int = 90
 
     @property
     def database_path(self) -> Path:
@@ -70,6 +72,11 @@ class Settings:
             self,
             "voice_whisper_model_path",
             app_path(self.voice_whisper_model_path),
+        )
+        object.__setattr__(
+            self,
+            "google_calendar_credentials_path",
+            app_path(self.google_calendar_credentials_path),
         )
 
 
@@ -215,6 +222,19 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
             values,
             "HULI_DESKTOP_NOTIFICATIONS_ENABLED",
             True,
+        ),
+        google_calendar_credentials_path=app_path(
+            values.get(
+                "HULI_GOOGLE_CALENDAR_CREDENTIALS_PATH",
+                "credentials/google_calendar_oauth.json",
+            )
+        ),
+        google_calendar_sync_days=_read_int(
+            values,
+            "HULI_GOOGLE_CALENDAR_SYNC_DAYS",
+            90,
+            minimum=1,
+            maximum=365,
         ),
     )
 

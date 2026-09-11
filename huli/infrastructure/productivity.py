@@ -35,6 +35,9 @@ class AppointmentRecord:
     project: str | None
     created_at: str
     cancelled_at: str | None
+    source: str = "local"
+    external_id: str | None = None
+    calendar_name: str | None = None
 
 
 class TaskRepository:
@@ -128,6 +131,71 @@ class AppointmentRepository:
             row = connection.execute("SELECT * FROM appointments WHERE id = ?", (int(cursor.lastrowid),)).fetchone()
         return self._from_row(row)
 
+    def upsert_external(
+        self,
+        *,
+        source: str,
+        external_id: str,
+        title: str,
+        start_at: datetime,
+        end_at: datetime | None,
+        calendar_name: str,
+    ) -> str:
+        source_value = " ".join(source.split()).casefold()
+        remote_value = " ".join(external_id.split())
+        title_value = " ".join(title.split()) or "(sem título)"
+        if not source_value or not remote_value:
+            raise ValueError("O compromisso externo precisa de origem e identificador.")
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM appointments WHERE source = ? AND external_id = ?",
+                (source_value, remote_value),
+            ).fetchone()
+            values = (
+                title_value,
+                start_at.isoformat(),
+                end_at.isoformat() if end_at else None,
+                calendar_name,
+            )
+            if row is None:
+                connection.execute(
+                    """
+                    INSERT INTO appointments(
+                        title, start_at, end_at, status, project, source, external_id, calendar_name
+                    ) VALUES (?, ?, ?, 'scheduled', NULL, ?, ?, ?)
+                    """,
+                    (*values[:3], source_value, remote_value, values[3]),
+                )
+                return "created"
+            changed = any(
+                str(row[key] or "") != str(value or "")
+                for key, value in zip(("title", "start_at", "end_at", "calendar_name"), values)
+            ) or str(row["status"]) != "scheduled"
+            if changed:
+                connection.execute(
+                    """
+                    UPDATE appointments
+                    SET title = ?, start_at = ?, end_at = ?, status = 'scheduled',
+                        cancelled_at = NULL, calendar_name = ?
+                    WHERE id = ?
+                    """,
+                    (*values, int(row["id"])),
+                )
+                return "updated"
+        return "unchanged"
+
+    def cancel_external(self, source: str, external_id: str) -> bool:
+        with self.database.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE appointments
+                SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP
+                WHERE source = ? AND external_id = ? AND status = 'scheduled'
+                """,
+                (source.casefold(), external_id),
+            )
+        return cursor.rowcount > 0
+
     def list_between(self, start_at: datetime, end_at: datetime, *, limit: int = 50) -> tuple[AppointmentRecord, ...]:
         safe_limit = max(1, min(int(limit), 200))
         with self.database.connect() as connection:
@@ -152,9 +220,9 @@ class AppointmentRepository:
             return None
         with self.database.connect() as connection:
             if normalized.isdigit():
-                row = connection.execute("SELECT * FROM appointments WHERE id = ? AND status = 'scheduled'", (int(normalized),)).fetchone()
+                row = connection.execute("SELECT * FROM appointments WHERE id = ? AND status = 'scheduled' AND source = 'local'", (int(normalized),)).fetchone()
             else:
-                candidates = connection.execute("SELECT * FROM appointments WHERE status = 'scheduled' ORDER BY start_at ASC").fetchall()
+                candidates = connection.execute("SELECT * FROM appointments WHERE status = 'scheduled' AND source = 'local' ORDER BY start_at ASC").fetchall()
                 matches = [item for item in candidates if _description_key(normalized) in _description_key(str(item["title"]))]
                 if len(matches) > 1:
                     raise ValueError("Encontrei mais de um compromisso. Informe o número: " + ", ".join(f"#{item['id']} {item['title']}" for item in matches[:5]))
@@ -172,12 +240,12 @@ class AppointmentRepository:
         with self.database.connect() as connection:
             if normalized.isdigit():
                 row = connection.execute(
-                    "SELECT * FROM appointments WHERE id = ? AND status = 'scheduled'",
+                    "SELECT * FROM appointments WHERE id = ? AND status = 'scheduled' AND source = 'local'",
                     (int(normalized),),
                 ).fetchone()
             else:
                 candidates = connection.execute(
-                    "SELECT * FROM appointments WHERE status = 'scheduled' ORDER BY start_at ASC"
+                    "SELECT * FROM appointments WHERE status = 'scheduled' AND source = 'local' ORDER BY start_at ASC"
                 ).fetchall()
                 matches = [
                     item
@@ -214,4 +282,7 @@ class AppointmentRepository:
             end_at=str(row["end_at"]) if row["end_at"] is not None else None,
             status=str(row["status"]), project=str(row["project"]) if row["project"] is not None else None,
             created_at=str(row["created_at"]), cancelled_at=str(row["cancelled_at"]) if row["cancelled_at"] is not None else None,
+            source=str(row["source"]) if "source" in row.keys() else "local",
+            external_id=str(row["external_id"]) if "external_id" in row.keys() and row["external_id"] is not None else None,
+            calendar_name=str(row["calendar_name"]) if "calendar_name" in row.keys() and row["calendar_name"] is not None else None,
         )

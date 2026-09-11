@@ -39,6 +39,7 @@ from huli.journal import (
     JournalRepository,
     JournalService,
 )
+from huli.integrations import GoogleCalendarService
 from huli.knowledge import (
     KnowledgeRepository,
     KnowledgeService,
@@ -89,6 +90,7 @@ class HuliRuntime:
     planner: PlannerService
     agenda: AgendaService
     agenda_reminders: AgendaReminderService
+    google_calendar: GoogleCalendarService
     weather: OpenMeteoWeatherService
     daily_summary: DailySummaryService
     habits: HabitService
@@ -152,6 +154,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         lead_minutes=resolved_settings.agenda_reminder_minutes,
         poll_seconds=resolved_settings.agenda_reminder_poll_seconds,
     )
+    google_calendar = GoogleCalendarService(resolved_settings, appointments, events)
     weather = OpenMeteoWeatherService(
         location=resolved_settings.weather_location,
         latitude=resolved_settings.weather_latitude,
@@ -238,6 +241,7 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
         planner=planner,
         agenda=agenda,
         agenda_reminders=agenda_reminders,
+        google_calendar=google_calendar,
         weather=weather,
         daily_summary=daily_summary,
         habits=habits,

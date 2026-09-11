@@ -88,7 +88,8 @@ class AgendaSkill:
                 lines.append("Agenda local; não há separação por calendário de trabalho nesta versão.")
             for item in items:
                 local = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
-                lines.append(f"- #{item.id} {local.strftime('%d/%m %H:%M')} — {item.title}")
+                origin = " [Google]" if item.source == "google" else ""
+                lines.append(f"- #{item.id}{origin} {local.strftime('%d/%m %H:%M')} — {item.title}")
             return self._response(request, "\n".join(lines))
         if intent == "agenda.cancel":
             target = extract_cancel_target(request.text)

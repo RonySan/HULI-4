@@ -21,6 +21,7 @@ from huli.desktop import (
     TrayUnavailableError,
     WindowsAutoStart,
 )
+from huli.integrations import GoogleCalendarError
 from huli.infrastructure.config import APP_ROOT
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
@@ -271,6 +272,8 @@ class HuliPanel:
         )
         if not session.is_guest:
             self.runtime.agenda_reminders.start()
+            if self.runtime.google_calendar.configured:
+                self.root.after(400, self._sync_google_calendar)
         if (
             not session.is_guest
             and self.runtime.settings.voice_wake_enabled
@@ -281,6 +284,44 @@ class HuliPanel:
         if self.session is None or self.session.is_guest or self._closed:
             return
         self.set_wake(True)
+
+    def _sync_google_calendar(self) -> None:
+        if self._closed or self.session is None or self.session.is_guest:
+            return
+        threading.Thread(
+            target=self._google_calendar_worker,
+            daemon=True,
+            name="huli-google-calendar-sync",
+        ).start()
+
+    def _google_calendar_worker(self) -> None:
+        try:
+            result = self.runtime.google_calendar.sync()
+        except GoogleCalendarError as exc:
+            self._safe_after(
+                self._append,
+                "Google Calendar",
+                f"Não consegui sincronizar agora: {exc}",
+            )
+        except Exception:
+            self._safe_after(
+                self._append,
+                "Google Calendar",
+                "Não consegui sincronizar agora. Seus compromissos locais continuam disponíveis.",
+            )
+        else:
+            if result.imported or result.updated or result.cancelled:
+                self._safe_after(
+                    self._append,
+                    "Google Calendar",
+                    result.summary(),
+                )
+        finally:
+            self._safe_after(self._schedule_google_calendar_sync)
+
+    def _schedule_google_calendar_sync(self) -> None:
+        if not self._closed:
+            self.root.after(15 * 60 * 1000, self._sync_google_calendar)
 
     def _require_session(self) -> PanelSession:
         if self.session is None:

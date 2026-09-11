@@ -37,6 +37,7 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
             "HULI_DESKTOP_RESIDENT_ENABLED": "sim",
             "HULI_DESKTOP_START_MINIMIZED": "sim",
             "HULI_DESKTOP_NOTIFICATIONS_ENABLED": "não",
+            "HULI_GOOGLE_CALENDAR_SYNC_DAYS": "60",
         }
     )
 
@@ -67,6 +68,7 @@ def test_load_settings_reads_runtime_values(tmp_path: Path) -> None:
     assert settings.desktop_resident_enabled is True
     assert settings.desktop_start_minimized is True
     assert settings.desktop_notifications_enabled is False
+    assert settings.google_calendar_sync_days == 60
     assert settings.database_path == tmp_path / "huli.db"
     assert settings.backup_dir == tmp_path / "backups"
 

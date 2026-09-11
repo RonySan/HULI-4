@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "huli-ai"
-version = "4.0.0a23"
+version = "4.0.0a24"
 description = "Huli 4 - assistente pessoal de IA local-first"
 requires-python = ">=3.11,<3.12"
 dependencies = [
@@ -18,6 +18,11 @@ dependencies = [
 voice = ["vosk==0.3.45", "sounddevice==0.5.3", "pocketsphinx>=5.1,<6"]
 voice-whisper = ["faster-whisper==1.2.1"]
 desktop = ["pystray==0.19.5", "Pillow>=11,<13"]
+google-calendar = [
+    "google-api-python-client>=2.184,<3",
+    "google-auth-httplib2>=0.2,<1",
+    "google-auth-oauthlib>=1.2,<2",
+]
 dev = [
     "httpx2>=2.12,<3",
     "pytest>=9,<10",

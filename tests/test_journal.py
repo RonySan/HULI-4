@@ -34,7 +34,7 @@ def test_journal_create_search_update_soft_delete_and_restore(tmp_path: Path) ->
         tags=("Trabalho", "Huli", "trabalho"),
     )
 
-    assert runtime.database.schema_version() == 9
+    assert runtime.database.schema_version() == 10
     assert entry.owner == "rony"
     assert entry.entry_date == date(2026, 8, 27)
     assert entry.mood == "feliz"
