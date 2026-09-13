@@ -24,11 +24,13 @@ class AgendaReminderService:
         agenda: AgendaService,
         *,
         lead_minutes: int = 15,
+        late_minutes: int = 10,
         poll_seconds: int = 30,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.agenda = agenda
         self.lead_minutes = max(1, min(int(lead_minutes), 120))
+        self.late_minutes = max(1, min(int(late_minutes), 120))
         self.poll_seconds = max(5, min(int(poll_seconds), 300))
         self._clock = clock or agenda.now
         self._lock = threading.RLock()
@@ -44,18 +46,22 @@ class AgendaReminderService:
     def check_now(self, now: datetime | None = None) -> tuple[AgendaReminderAlert, ...]:
         reference = (now or self._clock()).astimezone(self.agenda.timezone)
         cutoff = reference + timedelta(minutes=self.lead_minutes)
+        late_cutoff = reference - timedelta(minutes=self.late_minutes)
         alerts: list[AgendaReminderAlert] = []
-        for item in self.agenda.upcoming(reference, limit=50):
+        # Inclui uma janela curta no passado para avisar uma única vez quando
+        # um compromisso acabou de ficar atrasado.
+        for item in self.agenda.between(late_cutoff, cutoff, limit=50):
             start = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
-            if start > cutoff:
-                break
             with self._lock:
                 if item.id in self._announced:
                     continue
                 self._announced.add(item.id)
                 listeners = tuple(self._listeners)
-            minutes = max(0, int((start - reference).total_seconds() // 60))
-            if minutes == 0:
+            delta_minutes = int((start - reference).total_seconds() // 60)
+            minutes = max(0, delta_minutes)
+            if delta_minutes < 0:
+                message = f"Atenção: {item.title} começou há {abs(delta_minutes)} minutos, às {start.strftime('%H:%M')}."
+            elif minutes == 0:
                 message = f"Lembrete: {item.title} começa agora, às {start.strftime('%H:%M')}."
             elif minutes == 1:
                 message = f"Lembrete: {item.title} começa em 1 minuto, às {start.strftime('%H:%M')}."

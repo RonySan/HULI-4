@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.24`
+- **Versão:** `4.0.0-alpha.25`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
 - **Branch de desenvolvimento:** `resident-mode-alpha22`
@@ -188,6 +188,8 @@ chegar ao painel ou qual erro a impediu. Execute
 e o último resultado sem abrir a interface.
 
 A `alpha.24` integra o calendário principal do Google em modo somente leitura.
+A `alpha.25` adiciona painel Hoje, alertas de atraso, escuta contínua resiliente e
+criação no Google Calendar mediante confirmação visual explícita.
 Depois da autorização oficial do Google, eventos sincronizados aparecem como
 `[Google]` na agenda, resumo diário, briefing e lembretes. A Huli não cria,
 edita ou cancela eventos no Google nesta etapa.

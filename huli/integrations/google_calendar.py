@@ -20,7 +20,8 @@ from huli.security.os_protection import (
 )
 
 
-_SCOPES = ("https://www.googleapis.com/auth/calendar.events.readonly",)
+_READ_SCOPES = ("https://www.googleapis.com/auth/calendar.events.readonly",)
+_WRITE_SCOPES = ("https://www.googleapis.com/auth/calendar.events",)
 _TOKEN_FORMAT = "huli-google-calendar-token"
 
 
@@ -44,6 +45,15 @@ class GoogleSyncResult:
         if self.cancelled:
             parts.append(f"{self.cancelled} cancelado(s)")
         return ", ".join(parts) + "."
+
+
+@dataclass(frozen=True, slots=True)
+class GoogleCreatedEvent:
+    """Confirmação de um evento criado explicitamente no Google Calendar."""
+
+    event_id: str
+    title: str
+    start_at: datetime
 
 
 class GoogleTokenStore:
@@ -133,12 +143,32 @@ class GoogleCalendarService:
 
     def status_text(self) -> str:
         if self.configured:
+            if self.write_authorized:
+                return "Google Calendar conectado; leitura e criação confirmada de eventos disponíveis."
             return "Google Calendar conectado; sincronização somente leitura ativa."
         if self.credentials_available:
             return "Google Calendar pronto para conectar; falta autorizar sua conta."
         return "Google Calendar não configurado. Baixe a credencial OAuth de aplicativo para computador."
 
-    def connect(self) -> GoogleSyncResult:
+    @property
+    def write_authorized(self) -> bool:
+        try:
+            payload = self.token_store.load()
+        except GoogleCalendarError:
+            return False
+        scopes = set(payload.get("scopes", ())) if payload else set()
+        return set(_WRITE_SCOPES).issubset(scopes)
+
+    @staticmethod
+    def is_google_request(text: str) -> bool:
+        normalized = " ".join(str(text or "").casefold().split())
+        return (
+            "google calendar" in normalized
+            or " no google" in normalized
+            or " para o google" in normalized
+        )
+
+    def connect(self, *, write_access: bool = False) -> GoogleSyncResult:
         if not self.credentials_path.is_file():
             raise GoogleCalendarError(
                 "Não encontrei credentials/google_calendar_oauth.json. "
@@ -152,7 +182,7 @@ class GoogleCalendarService:
             ) from exc
         flow = InstalledAppFlow.from_client_secrets_file(
             str(self.credentials_path),
-            scopes=_SCOPES,
+            scopes=_WRITE_SCOPES if write_access else _READ_SCOPES,
         )
         credentials = flow.run_local_server(port=0)
         self.token_store.save(json.loads(credentials.to_json()))
@@ -164,7 +194,7 @@ class GoogleCalendarService:
         self.events.publish("google.calendar.disconnected", {})
 
     def sync(self, *, now: datetime | None = None) -> GoogleSyncResult:
-        credentials = self._load_credentials()
+        credentials = self._load_credentials(_READ_SCOPES)
         service = self._build_api(credentials)
         reference = (now or datetime.now(self.timezone)).astimezone(self.timezone)
         start = reference - timedelta(days=1)
@@ -214,7 +244,51 @@ class GoogleCalendarService:
         )
         return result
 
-    def _load_credentials(self):
+    def create_event(
+        self,
+        title: str,
+        start_at: datetime,
+        *,
+        end_at: datetime | None = None,
+    ) -> GoogleCreatedEvent:
+        """Cria um evento somente depois da confirmação visual da interface."""
+        normalized_title = " ".join(str(title or "").split())
+        if not normalized_title:
+            raise GoogleCalendarError("Informe o assunto do compromisso antes de confirmar.")
+        local_start = start_at.astimezone(self.timezone)
+        local_end = (end_at or (local_start + timedelta(hours=1))).astimezone(self.timezone)
+        if local_end <= local_start:
+            raise GoogleCalendarError("O fim do compromisso precisa ser depois do início.")
+        credentials = self._load_credentials(_WRITE_SCOPES)
+        service = self._build_api(credentials)
+        try:
+            created = service.events().insert(
+                calendarId="primary",
+                body={
+                    "summary": normalized_title,
+                    "start": {"dateTime": local_start.isoformat(), "timeZone": self.settings.timezone},
+                    "end": {"dateTime": local_end.isoformat(), "timeZone": self.settings.timezone},
+                },
+            ).execute()
+        except Exception as exc:
+            raise GoogleCalendarError(
+                "Não consegui criar o evento no Google Calendar. Nada foi salvo pela Huli."
+            ) from exc
+        event_id = str(created.get("id") or "").strip()
+        if not event_id:
+            raise GoogleCalendarError("O Google Calendar não confirmou um identificador para o evento.")
+        self.appointments.upsert_external(
+            source=self.source,
+            external_id=event_id,
+            title=normalized_title,
+            start_at=local_start,
+            end_at=local_end,
+            calendar_name="Google Calendar",
+        )
+        self.events.publish("google.calendar.event_created", {"event_id": event_id})
+        return GoogleCreatedEvent(event_id, normalized_title, local_start)
+
+    def _load_credentials(self, scopes: tuple[str, ...]):
         payload = self.token_store.load()
         if payload is None:
             raise GoogleCalendarError("Google Calendar ainda não está conectado.")
@@ -225,7 +299,12 @@ class GoogleCalendarService:
             raise GoogleCalendarError(
                 "Instale a integração com INSTALAR_GOOGLE_CALENDAR.bat antes de sincronizar."
             ) from exc
-        credentials = Credentials.from_authorized_user_info(payload, scopes=_SCOPES)
+        credentials = Credentials.from_authorized_user_info(payload, scopes=scopes)
+        if not credentials.has_scopes(scopes):
+            raise GoogleCalendarError(
+                "Essa conta tem somente permissão de leitura. Execute "
+                "AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat para permitir criação confirmada de eventos."
+            )
         if credentials.expired:
             if not credentials.refresh_token:
                 raise GoogleCalendarError("A autorização do Google expirou. Conecte novamente.")

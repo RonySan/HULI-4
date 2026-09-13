@@ -1,8 +1,7 @@
 # Google Calendar na Huli
 
-A Huli 4.0.0-alpha.24 sincroniza o calendário principal do Google em modo
-**somente leitura**. Ela importa compromissos para a agenda local, briefing e
-lembretes, mas não cria, altera ou remove eventos do Google.
+A Huli sincroniza o calendário principal do Google para a agenda local,
+briefing e lembretes. A conexão inicial é **somente leitura**.
 
 ## Preparação única
 
@@ -41,6 +40,25 @@ Para conferir o estado:
 ```powershell
 .venv\Scripts\python.exe -m tools.google_calendar status
 ```
+
+## Criar eventos com confirmação
+
+Por segurança, a Huli não recebe permissão de escrita automaticamente. Se você
+quiser criar eventos no Google, execute uma única vez:
+
+```powershell
+.\AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat
+```
+
+O navegador pedirá uma nova autorização, agora para criar eventos. Depois, use
+um comando como:
+
+```text
+agende reunião com Ana amanhã às 10 no Google
+```
+
+A Huli exibirá título, data e horário e só enviará o evento depois de uma
+confirmação visual. Ela ainda não edita nem cancela eventos do Google.
 
 ## Privacidade
 

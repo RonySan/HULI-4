@@ -10,7 +10,7 @@ from huli.integrations import GoogleCalendarError
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Integração local da Huli com Google Calendar.")
-    parser.add_argument("action", choices=("status", "connect", "sync", "disconnect"))
+    parser.add_argument("action", choices=("status", "connect", "connect-write", "sync", "disconnect"))
     args = parser.parse_args(argv)
     runtime = build_runtime()
     calendar = runtime.google_calendar
@@ -22,6 +22,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.action == "connect":
             result = calendar.connect()
             print(f"Huli: Google Calendar conectado. {result.summary()}")
+            return 0
+        if args.action == "connect-write":
+            result = calendar.connect(write_access=True)
+            print(f"Huli: Google Calendar autorizado para criar eventos após confirmação. {result.summary()}")
             return 0
         if args.action == "sync":
             result = calendar.sync()

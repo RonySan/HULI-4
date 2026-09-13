@@ -101,7 +101,7 @@ class WakeWordListener:
         aliases: tuple[str, ...] = (),
         rearm_delay: float = 3.0,
         rearm_waiter: Callable[[float], object] | None = None,
-        max_incomplete_activations: int = 3,
+        max_incomplete_activations: int = 999,
     ) -> None:
         self.service = service
         self.cycle_timeout = cycle_timeout

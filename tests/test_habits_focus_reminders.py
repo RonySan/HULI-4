@@ -101,6 +101,21 @@ def test_agenda_reminder_alerts_once_inside_the_lead_window(tmp_path: Path) -> N
     assert received == [first[0]]
 
 
+def test_agenda_reminder_warns_once_when_an_appointment_is_late(tmp_path: Path) -> None:
+    database = SQLiteDatabase(tmp_path / "huli.db")
+    database.initialize()
+    timezone = ZoneInfo("America/Sao_Paulo")
+    reference = datetime(2030, 5, 10, 8, 10, tzinfo=timezone)
+    agenda = AgendaService(AppointmentRepository(database), EventBus(), str(timezone))
+    appointment = agenda.create("consulta", reference - timedelta(minutes=5))
+    reminders = AgendaReminderService(agenda, lead_minutes=15, late_minutes=10)
+
+    alerts = reminders.check_now(reference)
+
+    assert alerts[0].appointment.id == appointment.id
+    assert "começou há 5 minutos" in alerts[0].message
+
+
 def test_database_schema_includes_habits(tmp_path: Path) -> None:
     database = SQLiteDatabase(tmp_path / "huli.db")
     database.initialize()

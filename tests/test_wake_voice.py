@@ -152,7 +152,7 @@ def test_incomplete_command_waits_before_rearming() -> None:
         listener.stop()
 
 
-def test_repeated_incomplete_calls_pause_listener_instead_of_spamming() -> None:
+def test_repeated_incomplete_calls_keep_listener_active_without_spamming() -> None:
     service = FakeService(
         wake=["huli", "huli", "huli"],
         commands=[
@@ -172,16 +172,16 @@ def test_repeated_incomplete_calls_pause_listener_instead_of_spamming() -> None:
     try:
         deadline = time.monotonic() + 1
         received = []
-        while listener.enabled and time.monotonic() < deadline:
+        while service.command_calls < 3 and time.monotonic() < deadline:
             event = listener.get_event()
             if event is not None:
                 received.append(event)
             time.sleep(0.005)
         while (event := listener.get_event()) is not None:
             received.append(event)
-        assert listener.enabled is False
+        assert listener.enabled is True
         assert sum("não recebi um comando" in event.text for event in received) == 1
-        assert any("pausada" in event.text for event in received)
+        assert not any("pausada" in event.text for event in received)
     finally:
         listener.stop()
 

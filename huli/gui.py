@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
+import re
 import threading
 import time
 import tkinter as tk
@@ -25,6 +27,7 @@ from huli.integrations import GoogleCalendarError
 from huli.infrastructure.config import APP_ROOT
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
+from huli.skills.parsing import parse_appointment_request
 from huli.voice import (
     VoiceCancelledError,
     VoiceCommand,
@@ -205,6 +208,10 @@ class HuliPanel:
         ttk.Label(top, textvariable=self.status_var).pack(side="left", padx=24)
         ttk.Button(top, text="Encerrar Huli", command=self.close).pack(side="right")
         ttk.Button(top, text="Minimizar", command=self.hide_to_tray).pack(
+            side="right",
+            padx=(0, 6),
+        )
+        ttk.Button(top, text="Hoje", command=self.show_today_panel).pack(
             side="right",
             padx=(0, 6),
         )
@@ -608,6 +615,9 @@ class HuliPanel:
                 return
 
             self.runtime.security.validate_input(text)
+            if intent == "agenda.create" and self.runtime.google_calendar.is_google_request(text):
+                self._create_google_appointment(text)
+                return
             response = self.runtime.kernel.process(text, metadata=self._metadata())
             self._append("Huli", response.text)
             if self.voice.can_speak_response(intent) and response.handled_by != "journal":
@@ -619,6 +629,99 @@ class HuliPanel:
                 self.wake.resume()
                 if hasattr(self, "status_var"):
                     self.status_var.set("Escuta contínua ligada — diga “Huli”")
+
+    def _create_google_appointment(self, text: str) -> None:
+        """Pede confirmação visual antes de qualquer escrita remota."""
+        cleaned = re.sub(
+            r"\b(?:no|para o)\s+google(?:\s+calendar)?\b",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
+        try:
+            title, start_at = parse_appointment_request(
+                cleaned,
+                timezone_name=self.runtime.settings.timezone,
+                now=self.runtime.agenda.now(),
+            )
+        except ValueError as exc:
+            self._append("Huli", str(exc))
+            return
+        detail = (
+            f"Criar no Google Calendar?\n\n{title}\n"
+            f"{start_at.strftime('%d/%m/%Y às %H:%M')}\n\n"
+            "A Huli só salvará após sua confirmação."
+        )
+        if not messagebox.askyesno("Confirmar Google Calendar", detail, parent=self.root):
+            self._append("Huli", "Certo, não criei nenhum evento no Google Calendar.")
+            return
+        try:
+            created = self.runtime.google_calendar.create_event(title, start_at)
+        except GoogleCalendarError as exc:
+            self._append("Huli", f"Não criei o evento no Google: {exc}")
+            return
+        self._append(
+            "Huli",
+            f"Evento criado no Google Calendar: {created.title}, "
+            f"{created.start_at.strftime('%d/%m às %H:%M')}.",
+        )
+
+    def show_today_panel(self) -> None:
+        """Mostra uma visão curta do dia sem interromper a conversa."""
+        window = tk.Toplevel(self.root)
+        window.title("Huli — Hoje")
+        window.geometry("560x500")
+        window.minsize(420, 320)
+        content = scrolledtext.ScrolledText(
+            window,
+            state="disabled",
+            wrap="word",
+            font=("Segoe UI", 11),
+            padx=14,
+            pady=14,
+        )
+        content.pack(fill="both", expand=True, padx=12, pady=(12, 8))
+
+        def refresh() -> None:
+            now = self.runtime.agenda.now()
+            items = self.runtime.agenda.today(now)
+            tasks = self.runtime.tasks.list_pending(limit=8)
+            lines = [f"Hoje, {now.strftime('%d/%m/%Y')} — {now.strftime('%H:%M')}", ""]
+            lines.append("AGENDA")
+            if items:
+                for item in items:
+                    local = datetime.fromisoformat(item.start_at).astimezone(
+                        self.runtime.agenda.timezone
+                    )
+                    origin = " [Google]" if item.source == "google" else ""
+                    lines.append(f"• {local.strftime('%H:%M')} — {item.title}{origin}")
+            else:
+                lines.append("• Nenhum compromisso hoje.")
+            lines.extend(("", "TAREFAS PENDENTES"))
+            if tasks:
+                for task in tasks:
+                    priority = " — prioridade alta" if task.priority == "alta" else ""
+                    lines.append(f"• #{task.id} {task.title}{priority}")
+            else:
+                lines.append("• Nenhuma tarefa pendente.")
+            lines.extend(
+                (
+                    "",
+                    "ATALHOS",
+                    "• Diga “bom dia” para o briefing completo.",
+                    "• Diga “agende reunião amanhã às 10 no Google” para criar após confirmar.",
+                )
+            )
+            content.configure(state="normal")
+            content.delete("1.0", "end")
+            content.insert("1.0", "\n".join(lines))
+            content.configure(state="disabled")
+
+        buttons = ttk.Frame(window, padding=(12, 0, 12, 12))
+        buttons.pack(fill="x")
+        ttk.Button(buttons, text="Atualizar", command=refresh).pack(side="left")
+        ttk.Button(buttons, text="Fechar", command=window.destroy).pack(side="right")
+        refresh()
 
     def _speak(self, text: str) -> None:
         try:

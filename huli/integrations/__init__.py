@@ -2,8 +2,9 @@
 
 from huli.integrations.google_calendar import (
     GoogleCalendarError,
+    GoogleCreatedEvent,
     GoogleCalendarService,
     GoogleSyncResult,
 )
 
-__all__ = ["GoogleCalendarError", "GoogleCalendarService", "GoogleSyncResult"]
+__all__ = ["GoogleCalendarError", "GoogleCalendarService", "GoogleCreatedEvent", "GoogleSyncResult"]
