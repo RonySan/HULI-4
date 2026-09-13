@@ -144,7 +144,7 @@ class GoogleCalendarService:
     def status_text(self) -> str:
         if self.configured:
             if self.write_authorized:
-                return "Google Calendar conectado; leitura e criação confirmada de eventos disponíveis."
+                return "Google Calendar conectado; leitura e criação direta de eventos disponíveis."
             return "Google Calendar conectado; sincronização somente leitura ativa."
         if self.credentials_available:
             return "Google Calendar pronto para conectar; falta autorizar sua conta."
@@ -251,10 +251,10 @@ class GoogleCalendarService:
         *,
         end_at: datetime | None = None,
     ) -> GoogleCreatedEvent:
-        """Cria um evento somente depois da confirmação visual da interface."""
+        """Cria um evento após um pedido explícito para agendar no Google."""
         normalized_title = " ".join(str(title or "").split())
         if not normalized_title:
-            raise GoogleCalendarError("Informe o assunto do compromisso antes de confirmar.")
+            raise GoogleCalendarError("Informe o assunto do compromisso.")
         local_start = start_at.astimezone(self.timezone)
         local_end = (end_at or (local_start + timedelta(hours=1))).astimezone(self.timezone)
         if local_end <= local_start:
@@ -303,7 +303,7 @@ class GoogleCalendarService:
         if not credentials.has_scopes(scopes):
             raise GoogleCalendarError(
                 "Essa conta tem somente permissão de leitura. Execute "
-                "AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat para permitir criação confirmada de eventos."
+                "AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat para permitir criação direta de eventos."
             )
         if credentials.expired:
             if not credentials.refresh_token:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -51,8 +52,10 @@ from huli.brain.normalization import normalize_text
 from huli.brain.agenda_reminders import AgendaReminderAlert
 from huli.brain.timers import TimerAlert
 from huli.core import InvalidKernelInput
+from huli.integrations import GoogleCalendarError
 from huli.security import AuthenticationError, JournalVaultError
 from huli.security.privacy import redact_private_text
+from huli.skills.parsing import parse_appointment_request
 from huli.voice import (
     VoiceCommand,
     VoiceError,
@@ -69,7 +72,6 @@ from huli.voice import (
 
 _WAKE_WRITE_INTENTS = frozenset(
     {
-        "agenda.create",
         "agenda.cancel",
         "agenda.complete",
         "task.create",
@@ -88,6 +90,27 @@ _WAKE_WRITE_INTENTS = frozenset(
 
 def _wake_requires_confirmation(intent: str) -> bool:
     return intent in _WAKE_WRITE_INTENTS or intent.startswith("journal.")
+
+
+def _create_google_appointment(runtime: HuliRuntime, text: str) -> str:
+    cleaned = re.sub(
+        r"\b(?:no|para o)\s+google(?:\s+calendar)?\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    title, start_at = parse_appointment_request(
+        cleaned,
+        timezone_name=runtime.settings.timezone,
+        now=runtime.agenda.now(),
+    )
+    suggestion = runtime.agenda.suggestion_for_slot(start_at)
+    created = runtime.google_calendar.create_event(title, start_at)
+    message = (
+        f"Evento criado no Google Calendar: {created.title}, "
+        f"{created.start_at.strftime('%d/%m às %H:%M')}."
+    )
+    return message + (f" {suggestion}" if suggestion else "")
 
 
 @dataclass(frozen=True, slots=True)
@@ -468,6 +491,19 @@ def run_cli() -> None:
                     continue
                 try:
                     runtime.security.validate_input(text)
+                    if (
+                        intent == "agenda.create"
+                        and runtime.google_calendar.is_google_request(text)
+                    ):
+                        try:
+                            google_message = _create_google_appointment(runtime, text)
+                        except GoogleCalendarError as exc:
+                            print(f"Huli: Não criei o evento no Google: {exc}")
+                        else:
+                            print(f"Huli: {google_message}")
+                            if voice.can_speak_response(intent):
+                                voice.service.speak(google_message)
+                        continue
                     response = runtime.kernel.process(text, metadata=_metadata(session))
                 except (InvalidKernelInput, ValueError) as exc:
                     print(f"Huli: {exc}")

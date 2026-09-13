@@ -46,7 +46,6 @@ from huli.voice import (
 
 _WAKE_WRITE_INTENTS = frozenset(
     {
-        "agenda.create",
         "agenda.cancel",
         "agenda.complete",
         "task.create",
@@ -264,7 +263,7 @@ class HuliPanel:
             text=(
                 "Diga “Huli” (como rú-li), espere ‘Estou ouvindo’ e fale o comando. "
                 "Se necessário, use “Calibrar nome”. "
-                "O teclado tem prioridade e ações que alteram dados pedem confirmação."
+                "O teclado tem prioridade. Agendamentos são diretos; outras alterações pedem confirmação."
             ),
             foreground="#555555",
         ).pack(fill="x", padx=14, pady=(0, 10))
@@ -631,7 +630,7 @@ class HuliPanel:
                     self.status_var.set("Escuta contínua ligada — diga “Huli”")
 
     def _create_google_appointment(self, text: str) -> None:
-        """Pede confirmação visual antes de qualquer escrita remota."""
+        """Cria diretamente quando o pedido mencionar explicitamente o Google."""
         cleaned = re.sub(
             r"\b(?:no|para o)\s+google(?:\s+calendar)?\b",
             "",
@@ -647,14 +646,7 @@ class HuliPanel:
         except ValueError as exc:
             self._append("Huli", str(exc))
             return
-        detail = (
-            f"Criar no Google Calendar?\n\n{title}\n"
-            f"{start_at.strftime('%d/%m/%Y às %H:%M')}\n\n"
-            "A Huli só salvará após sua confirmação."
-        )
-        if not messagebox.askyesno("Confirmar Google Calendar", detail, parent=self.root):
-            self._append("Huli", "Certo, não criei nenhum evento no Google Calendar.")
-            return
+        suggestion = self.runtime.agenda.suggestion_for_slot(start_at)
         try:
             created = self.runtime.google_calendar.create_event(title, start_at)
         except GoogleCalendarError as exc:
@@ -663,7 +655,8 @@ class HuliPanel:
         self._append(
             "Huli",
             f"Evento criado no Google Calendar: {created.title}, "
-            f"{created.start_at.strftime('%d/%m às %H:%M')}.",
+            f"{created.start_at.strftime('%d/%m às %H:%M')}."
+            + (f" {suggestion}" if suggestion else ""),
         )
 
     def show_today_panel(self) -> None:
@@ -704,12 +697,16 @@ class HuliPanel:
                     lines.append(f"• #{task.id} {task.title}{priority}")
             else:
                 lines.append("• Nenhuma tarefa pendente.")
+            suggestions = self.runtime.agenda.suggestions(items, now=now)
+            if suggestions:
+                lines.extend(("", "SUGESTÕES"))
+                lines.extend(f"• {suggestion}" for suggestion in suggestions)
             lines.extend(
                 (
                     "",
                     "ATALHOS",
                     "• Diga “bom dia” para o briefing completo.",
-                    "• Diga “agende reunião amanhã às 10 no Google” para criar após confirmar.",
+                    "• Diga “agende reunião amanhã às 10 no Google” para criar diretamente.",
                 )
             )
             content.configure(state="normal")

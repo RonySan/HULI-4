@@ -38,10 +38,14 @@ class AgendaSkill:
                 )
             except ValueError as exc:
                 return self._response(request, str(exc), ok=False)
+            suggestion = self.agenda.suggestion_for_slot(start_at)
             item = self.agenda.create(title, start_at, project=project)
             local = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
             project_label = f" no projeto {project}" if project else ""
-            return self._response(request, f"Compromisso #{item.id} agendado{project_label} para {local.strftime('%d/%m/%Y às %H:%M')}: {item.title}.")
+            message = f"Compromisso #{item.id} agendado{project_label} para {local.strftime('%d/%m/%Y às %H:%M')}: {item.title}."
+            if suggestion:
+                message += f" {suggestion}"
+            return self._response(request, message)
         if intent == "agenda.query":
             normalized = normalize(request.text)
             words = set(re.findall(r"\w+", normalized))
@@ -90,6 +94,9 @@ class AgendaSkill:
                 local = datetime.fromisoformat(item.start_at).astimezone(self.agenda.timezone)
                 origin = " [Google]" if item.source == "google" else ""
                 lines.append(f"- #{item.id}{origin} {local.strftime('%d/%m %H:%M')} — {item.title}")
+            suggestions = self.agenda.suggestions(items, now=reference)
+            if suggestions:
+                lines.append("Sugestão: " + " ".join(suggestions))
             return self._response(request, "\n".join(lines))
         if intent == "agenda.cancel":
             target = extract_cancel_target(request.text)

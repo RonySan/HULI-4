@@ -39,6 +39,9 @@ class MorningBriefingSkill:
             hidden = total - len(visible)
             if hidden:
                 parts.append(f"Há mais {hidden} na agenda de hoje.")
+            suggestions = self.agenda.suggestions(appointments, now=now)
+            if suggestions:
+                parts.append(" ".join(suggestions))
 
         try:
             weather = self.weather.current_and_today()

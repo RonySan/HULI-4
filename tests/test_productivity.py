@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -41,3 +41,22 @@ def test_planner_and_agenda_round_trip(tmp_path: Path) -> None:
     )
     assert agenda.complete(str(completed.id)).status == "completed"
     assert agenda.today(datetime(2030, 5, 10, 9, 0, tzinfo=tz)) == ()
+
+
+def test_agenda_suggests_conflicts_and_preparation(tmp_path: Path) -> None:
+    db = SQLiteDatabase(tmp_path / "huli.db")
+    db.initialize()
+    agenda = AgendaService(
+        AppointmentRepository(db),
+        EventBus(),
+        "America/Sao_Paulo",
+    )
+    timezone = ZoneInfo("America/Sao_Paulo")
+    reference = datetime(2030, 5, 10, 8, 15, tzinfo=timezone)
+    first = agenda.create("reunião", reference + timedelta(minutes=30))
+
+    assert "coincide" in str(
+        agenda.suggestion_for_slot(reference + timedelta(minutes=45))
+    )
+    suggestions = agenda.suggestions((first,), now=reference)
+    assert "começa em 30 minutos" in suggestions[0]

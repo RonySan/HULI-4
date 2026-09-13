@@ -48,6 +48,7 @@ def test_wake_queries_are_immediate_but_writes_require_keyboard_confirmation() -
         "time.query",
         "date.query",
         "agenda.query",
+        "agenda.create",
         "task.list",
         "project.query",
         "memory.recall",
@@ -55,7 +56,6 @@ def test_wake_queries_are_immediate_but_writes_require_keyboard_confirmation() -
     ):
         assert not cli._wake_requires_confirmation(intent)
     for intent in (
-        "agenda.create",
         "agenda.cancel",
         "task.create",
         "task.complete",

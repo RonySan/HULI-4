@@ -21,7 +21,7 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.25`
+- **Versão:** `4.0.0-alpha.26`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
 - **Branch de desenvolvimento:** `resident-mode-alpha22`
@@ -190,6 +190,9 @@ e o último resultado sem abrir a interface.
 A `alpha.24` integra o calendário principal do Google em modo somente leitura.
 A `alpha.25` adiciona painel Hoje, alertas de atraso, escuta contínua resiliente e
 criação no Google Calendar mediante confirmação visual explícita.
+A `alpha.26` permite agendar diretamente por voz ou teclado e inclui sugestões
+contextuais de conflito, intervalo, preparação e carga do dia. Cancelamentos e
+outras ações sensíveis continuam protegidos.
 Depois da autorização oficial do Google, eventos sincronizados aparecem como
 `[Google]` na agenda, resumo diário, briefing e lembretes. A Huli não cria,
 edita ou cancela eventos no Google nesta etapa.
@@ -347,6 +350,7 @@ Para trocar a melodia por um arquivo WAV local:
 Consultas são executadas imediatamente. Comandos de voz que alteram dados ou
 acessam o diário ficam pendentes por 30 segundos e só prosseguem quando o dono
 digita `confirmar voz`; a confirmação também passa pelas permissões normais.
+Criar um compromisso é a exceção escolhida pelo proprietário e ocorre diretamente.
 
 O painel e o terminal entram diretamente como `Rony` por padrão. Esse modo é
 controlado por `HULI_LOCAL_LOGIN_ENABLED=false`; para restaurar a tela anterior

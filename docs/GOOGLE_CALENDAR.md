@@ -41,10 +41,10 @@ Para conferir o estado:
 .venv\Scripts\python.exe -m tools.google_calendar status
 ```
 
-## Criar eventos com confirmação
+## Criar eventos diretamente
 
-Por segurança, a Huli não recebe permissão de escrita automaticamente. Se você
-quiser criar eventos no Google, execute uma única vez:
+A Huli não recebe permissão de escrita automaticamente. Se você quiser que ela
+crie eventos diretamente a partir dos seus pedidos, execute uma única vez:
 
 ```powershell
 .\AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat
@@ -57,8 +57,10 @@ um comando como:
 agende reunião com Ana amanhã às 10 no Google
 ```
 
-A Huli exibirá título, data e horário e só enviará o evento depois de uma
-confirmação visual. Ela ainda não edita nem cancela eventos do Google.
+A Huli cria o evento imediatamente quando o pedido mencionar explicitamente
+“Google” ou “Google Calendar”. Ela informa o resultado e sugere ajustes quando
+detectar conflito ou pouco intervalo. Ela ainda não edita nem cancela eventos
+do Google.
 
 ## Privacidade
 

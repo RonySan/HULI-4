@@ -31,6 +31,9 @@ class _Agenda:
     def today(self, now: datetime):
         return self.appointments
 
+    def suggestions(self, appointments, *, now: datetime):
+        return ()
+
 
 class _Weather:
     def current_and_today(self) -> WeatherSnapshot:
