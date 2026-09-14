@@ -389,7 +389,7 @@ class IntentEngine:
             _IntentRule(
                 IntentName.AGENDA_QUERY,
                 re.compile(
-                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|^(?:voce sabe )?quando (?:eu )?(?:tenho|tem|temos) compromissos (?:este|esse|neste|nesse) (?:mes|semana)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite|(?:este|esse|neste) (?:mes|semana))|compromissos (?:(?:de|para|pra) )?(?:hoje|amanha|esta noite|essa noite|(?:deste|desse|neste) (?:mes|semana))|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:(?:para|pra) )?(?:hoje|amanha)\b"
+                    r"^(?:agenda|agendas|minha agenda|nossa agenda)$|^(?:como (?:esta|ta) )?(?:a )?agenda (?:do )?google(?: calendar)?(?: (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite|(?:esta|essa|nesta|este|esse|neste) (?:mes|semana)))?$|^(?:voce sabe )?quando (?:eu )?(?:tenho|tem|temos) compromissos (?:este|esse|neste|nesse) (?:mes|semana)$|\b(?:(?:minha|nossa) agenda|agenda (?:de |para |pra )?(?:hoje|amanha|esta noite|essa noite|(?:este|esse|neste) (?:mes|semana))|compromissos (?:(?:de|para|pra) )?(?:hoje|amanha|esta noite|essa noite|(?:deste|desse|neste) (?:mes|semana))|meus compromissos|proximos compromissos)\b|\bo que (?:eu )?(?:tenho|temos) (?:para|pra) fazer (?:hoje|amanha)\b|\bo que (?:eu )?temos? na agenda\b|\bo que (?:eu )?tenho (?:hoje|amanha)\b|\btemos compromissos (?:(?:para|pra) )?(?:hoje|amanha)\b"
                 ),
                 0.96,
                 "agenda-query",

@@ -100,3 +100,23 @@ def test_google_event_creation_is_explicit_and_imported_locally(
     assert item.title == "Reunião confirmada"
     assert item.source == "google"
     assert GoogleCalendarService.is_google_request("agende reunião amanhã às 10 no Google")
+
+
+def test_write_scope_also_grants_calendar_read_access() -> None:
+    read_scope = "https://www.googleapis.com/auth/calendar.events.readonly"
+    write_scope = "https://www.googleapis.com/auth/calendar.events"
+
+    authorized = GoogleCalendarService._authorized_scopes(
+        {"scopes": [write_scope]},
+        (read_scope,),
+    )
+
+    assert authorized == (write_scope,)
+    assert GoogleCalendarService._grants_scopes(authorized, (read_scope,))
+
+
+def test_read_scope_does_not_grant_calendar_write_access() -> None:
+    read_scope = "https://www.googleapis.com/auth/calendar.events.readonly"
+    write_scope = "https://www.googleapis.com/auth/calendar.events"
+
+    assert not GoogleCalendarService._grants_scopes((read_scope,), (write_scope,))

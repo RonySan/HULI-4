@@ -425,6 +425,19 @@ def test_unrelated_words_are_not_rewritten_as_huli(text):
     assert normalize_spoken_vocative(text) == text
 
 
+def test_observed_google_calendar_transcription_is_repaired_as_read_query():
+    transcript = "Como está a agenda do grupo calendário? Oi. É tio. Oi"
+    corrected = normalize_spoken_vocative(transcript)
+
+    assert corrected == "como está a agenda do Google Calendar hoje"
+    assert IntentEngine().classify(corrected).intent == IntentName.AGENDA_QUERY
+
+
+def test_unrelated_group_calendar_sentence_is_not_rewritten():
+    text = "o grupo calendário será apresentado amanhã"
+    assert normalize_spoken_vocative(text) == text
+
+
 @pytest.mark.parametrize(("text", "expected"), [
     ("Huli!", True), ("Ruli", True), ("Ruly", True), ("Ru li", True),
     ("olhe", False), ("Juli", False), ("único", False),

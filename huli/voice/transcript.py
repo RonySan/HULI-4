@@ -18,6 +18,8 @@ _PREFIX = re.compile(
 _SAFE_MISHEARD_QUERIES = {
     "hoje sao": "que horas são",
     "que hoje": "que dia é hoje",
+    "como esta a agenda do grupo calendario hoje": "como está a agenda do Google Calendar hoje",
+    "como esta a agenda do grupo calendario oi e tio oi": "como está a agenda do Google Calendar hoje",
 }
 def canonical_safe_voice_query(text: str) -> str | None:
     """Corrige somente erros reais observados que resultam em consulta pública."""

@@ -28,7 +28,8 @@ from huli.voice.service import (
 
 _COMMAND_PROMPT = (
     "Huli, assistente pessoal em português do Brasil. Comandos comuns: abrir Spotify, "
-    "abrir calculadora, tocar minhas favoritas, agenda de hoje, compromissos, tarefas, "
+    "abrir calculadora, tocar minhas favoritas, Google Calendar, agenda do Google, "
+    "agenda de hoje, agenda desta semana, compromissos, criar evento no Google, tarefas, "
     "lembretes, lista de compras, hábitos, temporizador, que horas são."
 )
 

@@ -199,15 +199,21 @@ class GoogleCalendarService:
         reference = (now or datetime.now(self.timezone)).astimezone(self.timezone)
         start = reference - timedelta(days=1)
         end = reference + timedelta(days=self.settings.google_calendar_sync_days)
-        response = service.events().list(
-            calendarId="primary",
-            timeMin=start.isoformat(),
-            timeMax=end.isoformat(),
-            singleEvents=True,
-            showDeleted=True,
-            orderBy="startTime",
-            maxResults=1000,
-        ).execute()
+        try:
+            response = service.events().list(
+                calendarId="primary",
+                timeMin=start.isoformat(),
+                timeMax=end.isoformat(),
+                singleEvents=True,
+                showDeleted=True,
+                orderBy="startTime",
+                maxResults=1000,
+            ).execute()
+        except Exception as exc:
+            raise GoogleCalendarError(
+                "Não consegui consultar o Google Calendar agora. "
+                "Se o problema continuar, conecte a conta novamente."
+            ) from exc
         imported = updated = cancelled = 0
         for event in response.get("items", ()):
             remote_id = str(event.get("id") or "").strip()
@@ -299,18 +305,56 @@ class GoogleCalendarService:
             raise GoogleCalendarError(
                 "Instale a integração com INSTALAR_GOOGLE_CALENDAR.bat antes de sincronizar."
             ) from exc
-        credentials = Credentials.from_authorized_user_info(payload, scopes=scopes)
-        if not credentials.has_scopes(scopes):
+        authorized_scopes = self._authorized_scopes(payload, scopes)
+        if not self._grants_scopes(authorized_scopes, scopes):
             raise GoogleCalendarError(
                 "Essa conta tem somente permissão de leitura. Execute "
                 "AUTORIZAR_GOOGLE_CALENDAR_ESCRITA.bat para permitir criação direta de eventos."
             )
+        credentials = Credentials.from_authorized_user_info(
+            payload,
+            scopes=authorized_scopes,
+        )
         if credentials.expired:
             if not credentials.refresh_token:
                 raise GoogleCalendarError("A autorização do Google expirou. Conecte novamente.")
-            credentials.refresh(Request())
+            try:
+                credentials.refresh(Request())
+            except Exception as exc:
+                raise GoogleCalendarError(
+                    "Não consegui renovar a autorização do Google Calendar. "
+                    "Execute CONECTAR_GOOGLE_CALENDAR.bat novamente."
+                ) from exc
             self.token_store.save(json.loads(credentials.to_json()))
         return credentials
+
+    @staticmethod
+    def _authorized_scopes(
+        payload: dict[str, Any],
+        requested: tuple[str, ...],
+    ) -> tuple[str, ...]:
+        """Mantém no refresh exatamente os escopos concedidos pelo Google."""
+        raw = payload.get("scopes")
+        if isinstance(raw, str):
+            stored = tuple(part for part in raw.split() if part)
+        elif isinstance(raw, (list, tuple)):
+            stored = tuple(str(part) for part in raw if str(part).strip())
+        else:
+            stored = ()
+        return stored or requested
+
+    @staticmethod
+    def _grants_scopes(
+        authorized: tuple[str, ...],
+        requested: tuple[str, ...],
+    ) -> bool:
+        granted = set(authorized)
+        for scope in requested:
+            if scope == _READ_SCOPES[0] and _WRITE_SCOPES[0] in granted:
+                continue
+            if scope not in granted:
+                return False
+        return True
 
     @staticmethod
     def _build_api(credentials):

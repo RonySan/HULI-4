@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.26`
+- **Versão:** `4.0.0-alpha.27`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
-- **Branch de desenvolvimento:** `resident-mode-alpha22`
+- **Branch de desenvolvimento:** `voice-google-reliability-alpha27`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -193,9 +193,11 @@ criação no Google Calendar mediante confirmação visual explícita.
 A `alpha.26` permite agendar diretamente por voz ou teclado e inclui sugestões
 contextuais de conflito, intervalo, preparação e carga do dia. Cancelamentos e
 outras ações sensíveis continuam protegidos.
+A `alpha.27` corrige a renovação do token Google com permissão de escrita e melhora
+o reconhecimento de “Google Calendar” em consultas faladas de agenda.
 Depois da autorização oficial do Google, eventos sincronizados aparecem como
-`[Google]` na agenda, resumo diário, briefing e lembretes. A Huli não cria,
-edita ou cancela eventos no Google nesta etapa.
+`[Google]` na agenda, resumo diário, briefing e lembretes. A criação direta exige
+um pedido explícito para o Google; edição e cancelamento remotos seguem bloqueados.
 
 A `alpha.11` acrescenta um diário explícito que não alimenta automaticamente a
 Memory Engine nem o Knowledge Graph. Exemplos:
