@@ -24,6 +24,7 @@ from huli.voice.service import (
     VoiceTimeoutError,
     VoiceUnavailableError,
 )
+from huli.voice.speaker import SpeakerVerifier
 
 
 _COMMAND_PROMPT = (
@@ -85,11 +86,13 @@ class FasterWhisperInput:
         *,
         input_gain: float = 1.0,
         trailing_silence_seconds: float = 1.1,
+        speaker_verifier: SpeakerVerifier | None = None,
     ) -> None:
         self.model_path = Path(model_path)
         self.device = device
         self.input_gain = input_gain
         self.trailing_silence_seconds = max(0.6, trailing_silence_seconds)
+        self.speaker_verifier = speaker_verifier
         self._model = None
         self._model_lock = threading.Lock()
         self._listen_lock = threading.Lock()
@@ -159,6 +162,8 @@ class FasterWhisperInput:
             pcm = self._capture_phrase(timeout=timeout, cancel_event=cancel_event)
             if cancel_event is not None and cancel_event.is_set():
                 raise VoiceCancelledError("Escuta cancelada.")
+            if self.speaker_verifier is not None:
+                self.speaker_verifier.verify(pcm)
             return self._transcribe(pcm, cancel_event=cancel_event)
         except (VoiceError, KeyboardInterrupt):
             raise
@@ -169,7 +174,22 @@ class FasterWhisperInput:
         finally:
             self._listen_lock.release()
 
-    def _capture_phrase(self, *, timeout: int, cancel_event=None) -> bytes:
+    def capture_speaker_sample(self, *, timeout: int, cancel_event=None, on_ready=None) -> bytes:
+        """Captura uma amostra não transcrita e sem passar pelo perfil existente."""
+        if not self._listen_lock.acquire(blocking=False):
+            raise VoiceError("O microfone já está sendo usado pela Huli.")
+        try:
+            if cancel_event is not None and cancel_event.is_set():
+                raise VoiceCancelledError("Escuta cancelada.")
+            return self._capture_phrase(timeout=timeout, cancel_event=cancel_event, on_ready=on_ready)
+        except (VoiceError, KeyboardInterrupt):
+            raise
+        except Exception as exc:
+            raise VoiceError("Falha ao capturar a amostra do perfil vocal.") from exc
+        finally:
+            self._listen_lock.release()
+
+    def _capture_phrase(self, *, timeout: int, cancel_event=None, on_ready=None) -> bytes:
         _, sd = self._dependencies()
         self.check()
         info = sd.query_devices(self.device, "input")
@@ -204,6 +224,8 @@ class FasterWhisperInput:
             channels=1,
             callback=receive,
         ):
+            if on_ready is not None:
+                on_ready()
             while time.monotonic() < deadline:
                 if cancel_event is not None and cancel_event.is_set():
                     raise VoiceCancelledError("Escuta cancelada.")

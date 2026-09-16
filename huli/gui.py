@@ -95,6 +95,8 @@ class HuliPanel:
             whisper_model_path=settings.voice_whisper_model_path,
             input_device=settings.voice_input_device,
             input_gain=settings.voice_input_gain,
+            speaker_profile_path=settings.data_dir / "secrets" / "owner_voice_profile.json",
+            speaker_verification_enabled=settings.voice_owner_only,
         )
         self.voice = VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
         self.alias_store = WakeAliasStore(
@@ -106,6 +108,9 @@ class HuliPanel:
         self.listening = False
         self.calibrating = False
         self._calibration_cancel = threading.Event()
+        self.speaker_enrolling = False
+        self._speaker_enrollment_cancel = threading.Event()
+        self._speaker_wake_was_enabled = False
         self._wake_was_enabled = False
         self.pending_wake_command: tuple[str, float] | None = None
         self._closed = False
@@ -196,6 +201,7 @@ class HuliPanel:
     def _show_main(self) -> None:
         self._clear()
         session = self._require_session()
+        settings = self.runtime.settings
 
         top = ttk.Frame(self.root, padding=(12, 10))
         top.pack(fill="x")
@@ -256,6 +262,18 @@ class HuliPanel:
             state="disabled" if session.is_guest else "normal",
         )
         self.calibrate_button.pack(side="left", padx=(8, 0))
+        voice_profile_controls = ttk.Frame(self.root, padding=(12, 0, 12, 6))
+        voice_profile_controls.pack(fill='x')
+        self.speaker_button = ttk.Button(
+            voice_profile_controls,
+            text="🔐 Minha voz",
+            command=self.start_speaker_enrollment,
+            state="disabled" if session.is_guest else "normal",
+        )
+        self.speaker_button.pack(side="left", padx=(8, 0))
+        ttk.Button(voice_profile_controls, text='Apagar perfil vocal',
+                   command=self.delete_speaker_profile,
+                   state='disabled' if session.is_guest else 'normal').pack(side='left', padx=8)
         ttk.Button(controls, text="Enviar", command=self.send).pack(side="left", padx=(8, 0))
 
         ttk.Label(
@@ -276,6 +294,14 @@ class HuliPanel:
             "Huli",
             "Sessão iniciada. Use o teclado, ‘Ouvir agora’ ou ligue a escuta contínua.",
         )
+        if settings.voice_owner_only:
+            if self.voice.service.speaker_profile_ready():
+                self._append("Sistema", "Filtro vocal ativo: comandos exigem correspondência com seu perfil.")
+            else:
+                self._append(
+                    "Sistema",
+                    "Filtro vocal aguardando cadastro. Clique em ‘Minha voz’ antes de usar comandos falados.",
+                )
         if not session.is_guest:
             self.runtime.agenda_reminders.start()
             if self.runtime.google_calendar.configured:
@@ -624,7 +650,8 @@ class HuliPanel:
         except (InvalidKernelInput, ValueError) as exc:
             self._append("Huli", str(exc))
         finally:
-            if resume and self.wake and self.wake.enabled:
+            if (resume and self.wake and self.wake.enabled
+                    and not self.speaker_enrolling and not self.calibrating):
                 self.wake.resume()
                 if hasattr(self, "status_var"):
                     self.status_var.set("Escuta contínua ligada — diga “Huli”")
@@ -728,7 +755,7 @@ class HuliPanel:
             self._append("Sistema", f"A fala foi desativada: {exc}")
 
     def listen_once(self) -> None:
-        if self.listening or self.calibrating:
+        if self.listening or self.calibrating or self.speaker_enrolling:
             return
         self.listening = True
         if self.wake:
@@ -769,8 +796,8 @@ class HuliPanel:
         self.set_wake(not bool(self.wake and self.wake.enabled))
 
     def set_wake(self, enabled: bool) -> None:
-        if self.calibrating:
-            self._append("Sistema", "Conclua a calibração do nome antes de alterar a escuta.")
+        if self.calibrating or self.speaker_enrolling:
+            self._append("Sistema", "Conclua a calibração em andamento antes de alterar a escuta.")
             return
         if not enabled:
             if self.wake:
@@ -825,7 +852,7 @@ class HuliPanel:
                 "A calibração exige a sessão do proprietário.",
             )
             return
-        if self.calibrating or self.listening:
+        if self.calibrating or self.listening or self.speaker_enrolling:
             return
         messagebox.showinfo(
             "Calibrar nome",
@@ -851,6 +878,127 @@ class HuliPanel:
             daemon=True,
             name="huli-name-calibration",
         ).start()
+
+    def start_speaker_enrollment(self) -> None:
+        session = self._require_session()
+        if session.is_guest:
+            messagebox.showinfo("Minha voz", "O perfil vocal pertence ao proprietário.")
+            return
+        if self.calibrating or self.listening or self.speaker_enrolling:
+            return
+        accepted = messagebox.askokcancel(
+            "Cadastrar minha voz",
+            "A Huli pedirá cinco frases. O áudio será analisado apenas na memória e "
+            "descartado; somente uma assinatura acústica protegida pelo Windows será salva.\n\n"
+            "Este é um filtro pessoal, não biometria bancária: uma gravação da sua voz "
+            "ainda pode enganá-lo. Continue em um ambiente silencioso?",
+        )
+        if not accepted:
+            return
+        self.speaker_enrolling = True
+        self._speaker_enrollment_cancel = threading.Event()
+        self._speaker_wake_was_enabled = bool(self.wake and self.wake.enabled)
+        if self.wake:
+            self.wake.pause()
+        self.listen_button.configure(state="disabled")
+        self.wake_button.configure(state="disabled")
+        self.calibrate_button.configure(state="disabled")
+        self.speaker_button.configure(state="disabled", text="Cadastrando 0/5...")
+        self._append(
+            "Sistema",
+            "Cadastro vocal iniciado. Fale cada frase somente quando ela aparecer no topo.",
+        )
+        threading.Thread(
+            target=self._speaker_enrollment_worker,
+            daemon=True,
+            name="huli-owner-voice-enrollment",
+        ).start()
+
+    def delete_speaker_profile(self) -> None:
+        if self._require_session().is_guest or self.speaker_enrolling or self.listening or self.calibrating:
+            return
+        if not messagebox.askyesno('Apagar perfil vocal',
+                                  'Apagar seu cadastro de voz? Você precisará cadastrá-lo novamente. O teclado continua disponível.'):
+            return
+        self.set_wake(False)
+        try:
+            self.voice.service.backend.speaker_verifier.store.path.unlink(missing_ok=True)
+        except OSError:
+            self._append('Huli', 'Não consegui apagar o perfil vocal.')
+        else:
+            self._append('Huli', 'Perfil vocal apagado. Use Minha voz para cadastrar novamente.')
+
+    def _speaker_enrollment_worker(self) -> None:
+        phrases = (
+            "Huli, sou eu, Rony, e estou cadastrando minha voz para conversar com você",
+            "Huli, quero saber quais compromissos tenho na minha agenda de hoje",
+            "Huli, me ajude a organizar as tarefas que preciso fazer durante a semana",
+            "Huli, depois do trabalho eu gostaria de ouvir as minhas músicas favoritas",
+            "Huli, vamos planejar o meu dia com calma e lembrar dos compromissos importantes",
+        )
+        samples: list[bytes] = []
+        try:
+            for index, phrase in enumerate(phrases, start=1):
+                if self._speaker_enrollment_cancel.is_set():
+                    return
+                self._safe_after(self.status_var.set, f'Preparando amostra {index}/5...')
+                sample = self.voice.service.capture_speaker_sample(
+                    timeout=18,
+                    cancel_event=self._speaker_enrollment_cancel,
+                    on_ready=lambda i=index, p=phrase: self._safe_after(
+                        self._show_speaker_enrollment_prompt, i, p
+                    ),
+                )
+                samples.append(sample)
+                self._safe_after(
+                    self.status_var.set,
+                    f"Amostra vocal {index}/5 recebida.",
+                )
+                time.sleep(0.5)
+            if self._speaker_enrollment_cancel.is_set():
+                return
+            result = self.voice.service.enroll_speaker(samples)
+            self._safe_after(self._finish_speaker_enrollment, result.consistency, "")
+        except VoiceCancelledError:
+            return
+        except VoiceError as exc:
+            self._safe_after(self._finish_speaker_enrollment, 0.0, str(exc))
+        except Exception:
+            self._safe_after(self._finish_speaker_enrollment, 0.0,
+                             'Falha no cadastro; tente novamente. Seu perfil anterior foi preservado.')
+        finally:
+            samples.clear()
+
+    def _show_speaker_enrollment_prompt(self, index: int, phrase: str) -> None:
+        if not self.speaker_enrolling:
+            return
+        self.speaker_button.configure(text=f"Cadastrando {index}/5...")
+        self.status_var.set(f"Amostra {index}/5 — diga: “{phrase}”")
+        self._append('Sistema', f'Amostra {index}/5 — fale agora: {phrase}')
+
+    def _finish_speaker_enrollment(self, consistency: float, error: str) -> None:
+        if not self.speaker_enrolling:
+            return
+        self.speaker_enrolling = False
+        self.speaker_button.configure(state="normal", text="🔐 Minha voz")
+        self.calibrate_button.configure(state="normal")
+        self.wake_button.configure(state="normal")
+        if error:
+            self._append("Huli", f"Não consegui cadastrar sua voz: {error}")
+        else:
+            self._append(
+                "Huli",
+                "Pronto, Rony. Seu perfil vocal foi protegido localmente. "
+                "Agora teste sua voz com ‘Ouvir agora’. O filtro pode errar e não protege contra gravações.",
+            )
+        if self._speaker_wake_was_enabled and self.wake and self.wake.enabled:
+            self.wake.resume()
+            self.listen_button.configure(state="disabled")
+            self.status_var.set("Escuta contínua ligada — diga “Huli”")
+        else:
+            self.listen_button.configure(state="normal")
+            self.status_var.set("Escuta contínua desligada")
+        self._speaker_wake_was_enabled = False
 
     def _calibration_worker(self) -> None:
         samples: list[str] = []
@@ -988,6 +1136,9 @@ class HuliPanel:
         if self.calibrating:
             self.calibrating = False
             self._calibration_cancel.set()
+        if self.speaker_enrolling:
+            self.speaker_enrolling = False
+            self._speaker_enrollment_cancel.set()
         if self.wake:
             self.wake.stop()
             self.wake = None

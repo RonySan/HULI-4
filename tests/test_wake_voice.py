@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from huli.voice import VoiceCancelledError, VoiceTimeoutError
+from huli.voice import VoiceCancelledError, VoiceIdentityError, VoiceTimeoutError
 from huli.voice.console import HybridInputResult, read_hybrid_input
 from huli.voice.wake import (
     WakeEvent,
@@ -17,12 +17,16 @@ from huli.voice.wake import (
 
 
 class FakeService:
-    def __init__(self, wake=(), commands=()):
+    def __init__(self, wake=(), commands=(), verification=False):
         self.wake = deque(wake)
         self.commands = deque(commands)
         self.prepared = False
         self.wake_calls = 0
         self.command_calls = 0
+        self.verification = verification
+
+    def speaker_verification_enabled(self):
+        return self.verification
 
     def prepare_input(self):
         self.prepared = True
@@ -123,6 +127,52 @@ def test_name_then_pause_requests_and_queues_the_following_phrase():
             "que horas são",
         )
         assert service.command_calls == 1
+    finally:
+        listener.stop()
+
+
+def test_same_phrase_command_is_verified_in_a_second_capture():
+    service = FakeService(
+        wake=["huli que horas são"],
+        commands=["que horas são"],
+        verification=True,
+    )
+    listener = WakeWordListener(service, cycle_timeout=2, command_timeout=8)
+    listener.start()
+    try:
+        assert listener.events.get(timeout=1).kind is WakeEventKind.STATUS
+        assert listener.events.get(timeout=1) == WakeEvent(
+            WakeEventKind.COMMAND,
+            "que horas são",
+        )
+        assert service.command_calls == 1
+    finally:
+        listener.stop()
+
+
+def test_different_speaker_is_reported_and_never_delivered():
+    service = FakeService(
+        wake=["huli"],
+        commands=[VoiceIdentityError("voz diferente")],
+        verification=True,
+    )
+    listener = WakeWordListener(
+        service,
+        cycle_timeout=2,
+        command_timeout=8,
+        feedback=True,
+        rearm_delay=0,
+    )
+    listener.start()
+    try:
+        assert listener.events.get(timeout=1).kind is WakeEventKind.STATUS
+        rejected = listener.events.get(timeout=1)
+        assert rejected.kind is WakeEventKind.HEARD
+        assert "comando ignorado" in rejected.text
+        assert not any(
+            event.kind is WakeEventKind.COMMAND
+            for event in tuple(listener.events.queue)
+        )
     finally:
         listener.stop()
 

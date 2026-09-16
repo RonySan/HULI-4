@@ -228,6 +228,8 @@ def _build_voice_session(runtime: HuliRuntime) -> VoiceSession:
         whisper_model_path=settings.voice_whisper_model_path,
         input_device=settings.voice_input_device,
         input_gain=settings.voice_input_gain,
+        speaker_profile_path=settings.data_dir / "secrets" / "owner_voice_profile.json",
+        speaker_verification_enabled=settings.voice_owner_only,
     )
     return VoiceSession(service=service, auto_speak=settings.voice_auto_speak)
 

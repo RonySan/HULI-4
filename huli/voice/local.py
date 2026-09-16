@@ -19,6 +19,7 @@ from huli.voice.service import (
     VoiceCancelledError, VoiceCapabilities, VoiceError, VoiceTimeoutError, VoiceUnavailableError,
     WindowsSpeechBackend,
 )
+from huli.voice.speaker import SpeakerProfileStore, SpeakerVerifier, VoskSpeakerEncoder
 from huli.voice.transcript import (
     is_spoken_vocative,
     normalize_spoken_vocative,
@@ -398,13 +399,24 @@ class LocalVoiceBackend:
     def __init__(self, *, language: str = "pt-BR", input_provider: str = "auto",
                  model_path: Path | None = None, input_device: str | int | None = None,
                  input_gain: float = 1.0,
-                 whisper_model_path: Path | None = None) -> None:
+                 whisper_model_path: Path | None = None,
+                 speaker_profile_path: Path | None = None,
+                 speaker_verification_enabled: bool = False) -> None:
         from huli.infrastructure.config import APP_ROOT
 
         self.language = language
         self.input_provider = input_provider
         self.synthesis = WindowsSpeechBackend(language=language)
         self.input_gain = input_gain
+        self.speaker_verifier = SpeakerVerifier(
+            SpeakerProfileStore(
+                speaker_profile_path
+                or APP_ROOT / "data" / "secrets" / "owner_voice_profile.json"
+            ),
+            enabled=speaker_verification_enabled,
+            encoder=VoskSpeakerEncoder(model_path or APP_ROOT / 'models' / 'vosk-pt',
+                                       APP_ROOT / 'models' / 'vosk-model-spk-0.4'),
+        )
         self.vosk = VoskInput(
             model_path or APP_ROOT / "models" / "vosk-pt",
             input_device,
@@ -414,6 +426,7 @@ class LocalVoiceBackend:
             whisper_model_path or APP_ROOT / "models" / "whisper-small",
             input_device,
             input_gain=input_gain,
+            speaker_verifier=self.speaker_verifier,
         )
         self.phonetic_wake = PhoneticWakeInput(
             input_device,
@@ -445,6 +458,11 @@ class LocalVoiceBackend:
                     True,
                     provider,
                     f"{native.detail} Escuta {label}: pronta; microfone: {microphone}; "
+                    f"ganho: {self.input_gain:.1f}x.{wake_detail} "
+                    f"Perfil do Rony: "
+                    f"{'ativo' if self.speaker_verifier.ready else 'aguardando cadastro'}."
+                    if self.speaker_verifier.enabled
+                    else f"{native.detail} Escuta {label}: pronta; microfone: {microphone}; "
                     f"ganho: {self.input_gain:.1f}x.{wake_detail}",
                 )
             except VoiceError as exc:
@@ -484,18 +502,50 @@ class LocalVoiceBackend:
 
     def prepare_input(self) -> None:
         engine = self._selected_input()
+        self._require_verifiable_engine(engine)
+        if self.speaker_verifier.enabled:
+            if not self.speaker_verifier.ready:
+                raise VoiceUnavailableError('Cadastre sua voz em Minha voz; o teclado continua disponível.')
+            self.speaker_verifier.prepare()
         prepare = getattr(engine, "prepare", None)
         if prepare is not None:
             prepare()
 
     def listen_once(self, *, language: str, timeout: int) -> str:
-        return self._selected_input().listen_once(language=language, timeout=timeout)
+        engine = self._selected_input()
+        self._require_verifiable_engine(engine)
+        return engine.listen_once(language=language, timeout=timeout)
 
     def listen_cancelable(self, *, language: str, timeout: int, cancel_event) -> str:
         engine = self._selected_input()
+        self._require_verifiable_engine(engine)
         if engine is self.synthesis:
             return engine.listen_once(language=language, timeout=timeout)
         return engine.listen_once(language=language, timeout=timeout, cancel_event=cancel_event)
+
+    def _require_verifiable_engine(self, engine) -> None:
+        if self.speaker_verifier.enabled and engine is not self.whisper:
+            raise VoiceUnavailableError(
+                "O filtro da voz do Rony exige o Whisper local."
+            )
+
+    def speaker_profile_ready(self) -> bool:
+        return self.speaker_verifier.ready
+
+    def speaker_verification_enabled(self) -> bool:
+        return self.speaker_verifier.enabled
+
+    def capture_speaker_sample(self, *, timeout: int, cancel_event=None, on_ready=None) -> bytes:
+        self.speaker_verifier.prepare()
+        self.whisper.check()
+        return self.whisper.capture_speaker_sample(
+            timeout=timeout,
+            cancel_event=cancel_event,
+            on_ready=on_ready,
+        )
+
+    def enroll_speaker(self, samples):
+        return self.speaker_verifier.enroll(samples)
 
     def listen_wake_once(
         self,

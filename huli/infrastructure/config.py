@@ -45,6 +45,7 @@ class Settings:
     voice_whisper_model_path: Path = APP_ROOT / "models" / "whisper-small"
     voice_input_device: str | int | None = None
     voice_input_gain: float = 1.8
+    voice_owner_only: bool = True
     voice_start_listening: bool = False
     voice_wake_enabled: bool = False
     voice_wake_cycle_timeout: int = 30
@@ -178,6 +179,7 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         ),
         voice_input_device=voice_input_device,
         voice_input_gain=voice_input_gain,
+        voice_owner_only=_read_bool(values, "HULI_VOICE_OWNER_ONLY", True),
         voice_start_listening=_read_bool(values, "HULI_VOICE_START_LISTENING", False),
         voice_wake_enabled=_read_bool(values, "HULI_VOICE_WAKE_ENABLED", False),
         voice_wake_cycle_timeout=_read_int(

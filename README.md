@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.27`
+- **Versão:** `4.0.0-alpha.28`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** modo residente, voz contínua, mídia e aplicativos
-- **Branch de desenvolvimento:** `voice-google-reliability-alpha27`
+- **Branch de desenvolvimento:** `owner-voice-alpha28`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -74,6 +74,11 @@ forma determinística. Personalidade nunca altera fatos, permissões ou decisõe
 de domínio. OpenAI e Ollama continuam fora desta fase.
 
 ## Capacidades atuais
+
+A alpha.28 acrescenta o botão **Minha voz** para cadastrar cinco frases do
+proprietário e conferir a voz de cada comando com um modelo Vosk de locutor.
+O filtro está ligado por padrão; antes do cadastro, use o teclado. Confira
+[cadastro e limitações](docs/ATUALIZACAO_4.0.0_ALPHA28.md).
 
 - `system.status`
 - `computer.health`

@@ -6,6 +6,7 @@ set HULI_VOICE_INPUT_PROVIDER=auto
 set HULI_VOICE_INPUT_TIMEOUT=20
 set HULI_VOICE_WAKE_ENABLED=true
 set HULI_VOICE_AUTO_SPEAK=true
+set HULI_VOICE_OWNER_ONLY=true
 set HULI_DESKTOP_RESIDENT_ENABLED=true
 if not exist ".venv\Scripts\pythonw.exe" (
     echo Ambiente Python da Huli nao encontrado.

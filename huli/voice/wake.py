@@ -15,6 +15,7 @@ from huli.voice.calibration import normalize_wake_alias
 from huli.voice.service import (
     VoiceCancelledError,
     VoiceError,
+    VoiceIdentityError,
     VoiceService,
     VoiceTimeoutError,
     VoiceUnavailableError,
@@ -247,7 +248,12 @@ class WakeWordListener:
                             f"Ouvi “{heard}”, mas não reconheci o chamado Huli."
                         )
                     continue
-                if command:
+                verification_enabled = getattr(
+                    self.service,
+                    "speaker_verification_enabled",
+                    lambda: False,
+                )()
+                if command and not verification_enabled:
                     self._deliver(command)
                     continue
                 activated = True
@@ -284,6 +290,11 @@ class WakeWordListener:
             except VoiceUnavailableError as exc:
                 self._emit(WakeEventKind.ERROR, f"Huli: Ativação por voz indisponível: {exc}")
                 self._enabled.clear()
+            except VoiceIdentityError:
+                self._emit_feedback(
+                    "Voz diferente do perfil do Rony; comando ignorado."
+                )
+                self._rearm_waiter(self.rearm_delay)
             except VoiceError:
                 # Ruído ou baixa confiança nunca vira comando nem polui o terminal.
                 self._emit_feedback(

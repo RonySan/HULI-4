@@ -27,6 +27,10 @@ class VoiceCancelledError(VoiceError):
     """A escuta foi interrompida localmente antes de produzir um comando."""
 
 
+class VoiceIdentityError(VoiceError):
+    """A fala não corresponde ao perfil vocal autorizado."""
+
+
 @dataclass(frozen=True, slots=True)
 class VoiceCapabilities:
     output_available: bool
@@ -267,6 +271,8 @@ class VoiceService:
         whisper_model_path: Path | None = None,
         input_device: str | int | None = None,
         input_gain: float = 1.0,
+        speaker_profile_path: Path | None = None,
+        speaker_verification_enabled: bool = False,
     ) -> VoiceService:
         from huli.voice.local import LocalVoiceBackend
 
@@ -274,7 +280,9 @@ class VoiceService:
             LocalVoiceBackend(language=language, input_provider=input_provider,
                               model_path=model_path, input_device=input_device,
                               input_gain=input_gain,
-                              whisper_model_path=whisper_model_path),
+                              whisper_model_path=whisper_model_path,
+                              speaker_profile_path=speaker_profile_path,
+                              speaker_verification_enabled=speaker_verification_enabled),
             language=language,
             input_timeout=input_timeout,
             rate=rate,
@@ -338,3 +346,23 @@ class VoiceService:
         prepare = getattr(self.backend, "prepare_input", None)
         if prepare is not None:
             prepare()
+
+    def speaker_profile_ready(self) -> bool:
+        checker = getattr(self.backend, "speaker_profile_ready", None)
+        return bool(checker and checker())
+
+    def speaker_verification_enabled(self) -> bool:
+        checker = getattr(self.backend, "speaker_verification_enabled", None)
+        return bool(checker and checker())
+
+    def capture_speaker_sample(self, *, timeout: int = 8, cancel_event=None, on_ready=None) -> bytes:
+        capture = getattr(self.backend, "capture_speaker_sample", None)
+        if capture is None:
+            raise VoiceUnavailableError("Este mecanismo não permite cadastrar perfil vocal.")
+        return capture(timeout=timeout, cancel_event=cancel_event, on_ready=on_ready)
+
+    def enroll_speaker(self, samples):
+        enroll = getattr(self.backend, "enroll_speaker", None)
+        if enroll is None:
+            raise VoiceUnavailableError("Este mecanismo não permite cadastrar perfil vocal.")
+        return enroll(samples)
