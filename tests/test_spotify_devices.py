@@ -55,7 +55,7 @@ def test_spoken_device_intents(spoken, intent):
 
 
 def test_spotify_device_listing_is_sanitized(tmp_path, monkeypatch):
-    client = SpotifyClient("a" * 32, tmp_path / "not-used")
+    client = SpotifyClient("a" * 32, tmp_path / "not-used", store=object())
     monkeypatch.setattr(client, "_access_token", lambda: "fake")
     monkeypatch.setattr(spotify, "_http_json", lambda url, **kwargs: {
         "devices": [
