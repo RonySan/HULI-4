@@ -73,3 +73,29 @@ def test_local_mode_retains_existing_passwordless_api(tmp_path: Path):
     client, _runtime = make_client(tmp_path, remote=False)
     assert client.post("/v1/auth/setup", json={"username": "rony"}).status_code == 201
     assert client.post("/v1/auth/login", json={"username": "rony"}).status_code == 200
+
+
+def test_remote_policy_checks_effective_intent_after_personality(tmp_path: Path, monkeypatch):
+    from types import SimpleNamespace
+
+    client, runtime = make_client(tmp_path, remote=True)
+    runtime.auth.create_owner("rony", "senha-bem-segura")
+    login = client.post("/v1/auth/login", json={"username": "rony", "password": "senha-bem-segura"})
+    headers = {"Authorization": "Bearer " + login.json()["access_token"]}
+
+    real_decide = runtime.personality.decide
+
+    def remap_unknown(**kwargs):
+        if kwargs["intent"] == "unknown":
+            return SimpleNamespace(
+                intent="app.open",
+                mode=SimpleNamespace(value="professional"),
+                reason="test",
+                is_followup=False,
+            )
+        return real_decide(**kwargs)
+
+    monkeypatch.setattr(runtime.personality, "decide", remap_unknown)
+    response = client.post("/v1/messages", headers=headers, json={"text": "palavras nao reconhecidas xyzxyz"})
+    assert response.status_code == 403
+    assert "apenas no computador local" in response.json()["detail"]
