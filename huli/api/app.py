@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from collections import deque
+from threading import Lock
+from time import monotonic
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -48,6 +51,16 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
     resolved_runtime = runtime or build_runtime()
     app = FastAPI(title="Huli API", version=__version__, docs_url="/docs", redoc_url=None)
     app.state.runtime = resolved_runtime
+    failed_logins: dict[str, deque[float]] = {}
+    login_lock = Lock()
+
+    @app.middleware("http")
+    async def private_cache_headers(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/v1/"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
     app.mount("/app/static", StaticFiles(directory=_WEB_ROOT), name="huli-web")
 
@@ -97,7 +110,24 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
         return {"id": user.id, "username": user.username, "password_protected": bool(payload.password)}
 
     @app.post("/v1/auth/login")
-    def login(payload: LoginRequest) -> dict[str, object]:
+    def login(payload: LoginRequest, request: Request) -> dict[str, object]:
+        client_ip = request.client.host if request.client else "unknown"
+        if resolved_runtime.settings.remote_access_enabled:
+            with login_lock:
+                now = monotonic()
+                attempts = failed_logins.setdefault(client_ip, deque())
+                while attempts and now - attempts[0] > 300:
+                    attempts.popleft()
+                if len(attempts) >= 6:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Muitas tentativas. Aguarde cinco minutos.",
+                    )
+            if len(payload.password) < resolved_runtime.security.min_password_length:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acesso privado exige senha de pelo menos oito caracteres.",
+                )
         if resolved_runtime.settings.remote_access_enabled and not payload.password:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -108,7 +138,13 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
         except JournalVaultError as exc:
             raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=str(exc)) from exc
         except (AuthenticationError, ValueError) as exc:
+            if resolved_runtime.settings.remote_access_enabled:
+                with login_lock:
+                    failed_logins.setdefault(client_ip, deque()).append(monotonic())
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário ou senha inválidos.") from exc
+        if resolved_runtime.settings.remote_access_enabled:
+            with login_lock:
+                failed_logins.pop(client_ip, None)
         unlock_result = resolved_runtime.journal_vault.last_unlock_result(user.username)
         return {"token_type": "bearer", "access_token": token, "user": {"id": user.id, "username": user.username}, "password_upgrade_recommended": bool(payload.password) and len(payload.password) < resolved_runtime.security.min_password_length, "journal_vault": {"migrated_entries": unlock_result.migrated_entries if unlock_result else 0, "migration_backup": str(unlock_result.migration_backup) if unlock_result and unlock_result.migration_backup else None, "os_protection": unlock_result.os_protection if unlock_result else None}}
 
