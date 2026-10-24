@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.15`
+- **Versão:** `4.0.0-alpha.17`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
 - **Módulo atual:** voz local, agenda natural e cliente web multidispositivo (staging)
-- **Branch de desenvolvimento:** `phase-6-multidevice-alpha15`
+- **Branch de desenvolvimento:** `phase-8-spotify-alpha17`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -405,3 +405,7 @@ Novas ideias não alteram arbitrariamente a arquitetura ou a ordem do projeto. E
 
 A integração opcional com Ollama responde perguntas livres sem alterar as Skills existentes.
 Veja [instalação e limites de segurança](docs/OLLAMA_ALPHA16.md).
+
+## H.U.L.I. alpha.17 — Spotify pessoal
+
+Comandos determinísticos de Spotify, autenticação OAuth PKCE e tokens criptografados com DPAPI no Windows. Veja [guia de configuração Spotify](docs/SPOTIFY_ALPHA17.md). A integração exige autenticação voluntária e Spotify Premium; nenhum áudio é redistribuído pela Huli.

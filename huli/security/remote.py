@@ -6,6 +6,7 @@ REMOTE_ALLOWED_INTENTS = frozenset({
     "task.complete", "daily.summary", "smalltalk", "conversation.recap",
     "project.query", "memory.remember", "memory.recall", "memory.list",
     "knowledge.describe", "knowledge.relation", "unknown",
+    "spotify.play", "spotify.pause", "spotify.resume", "spotify.next", "spotify.list",
 })
 
 

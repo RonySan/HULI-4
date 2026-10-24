@@ -25,6 +25,7 @@ def test_build_runtime_connects_phase3_staging_components(tmp_path: Path) -> Non
         "project-context",
         "memory",
         "knowledge",
+        "spotify",
     )
     assert runtime.database.schema_version() == 8
     assert runtime.journal_vault.is_unlocked("rony") is False
