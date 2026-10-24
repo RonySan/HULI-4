@@ -9,7 +9,7 @@ import webbrowser
 
 from huli.infrastructure import load_settings
 from huli.integrations.spotify import (
-    REDIRECT_URI, SpotifyClient, SpotifyError, authorization_url, generate_pkce,
+    SpotifyClient, SpotifyError, authorization_url, generate_pkce,
 )
 
 
