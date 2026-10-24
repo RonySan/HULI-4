@@ -47,6 +47,7 @@ from huli.memory import (
 from huli.personality import PersonalityEngine
 from huli.security import AuthService, JournalVault, SecurityPolicy
 from huli.security.privacy import filter_private_input
+from huli.skills.local_llm import LocalLLMSkill
 from huli.skills import (
     AgendaSkill,
     ApplicationSkill,
@@ -175,6 +176,8 @@ def build_runtime(settings: Settings | None = None) -> HuliRuntime:
     skills.register(ProjectContextSkill(context, planner, memory))
     skills.register(MemorySkill(memory))
     skills.register(KnowledgeSkill(knowledge))
+    if resolved_settings.llm_enabled:
+        skills.register(LocalLLMSkill(resolved_settings.llm_model, resolved_settings.llm_timeout_seconds))
 
     dispatcher = BrainDispatcher(
         intents=intents,

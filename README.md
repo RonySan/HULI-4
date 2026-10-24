@@ -399,3 +399,9 @@ registre credenciais no diário.
 ## Regra arquitetural
 
 Novas ideias não alteram arbitrariamente a arquitetura ou a ordem do projeto. Elas devem ser encaixadas na fase correspondente do roadmap.
+
+
+## H.U.L.I. alpha.16 — IA conversacional local
+
+A integração opcional com Ollama responde perguntas livres sem alterar as Skills existentes.
+Veja [instalação e limites de segurança](docs/OLLAMA_ALPHA16.md).
