@@ -1,0 +1,13 @@
+{
+  "id": "/app",
+  "name": "Huli — Assistente Pessoal",
+  "short_name": "Huli",
+  "description": "Sua assistente privada no computador e no Android.",
+  "start_url": "/app",
+  "scope": "/app",
+  "display": "standalone",
+  "background_color": "#071326",
+  "theme_color": "#071326",
+  "lang": "pt-BR",
+  "icons": [{"src":"/app/static/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
