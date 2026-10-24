@@ -11,7 +11,7 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 echo =================================================
-echo  HULI WEB 4.0.0-alpha.17
+echo  HULI WEB 4.0.0-alpha.18
 echo  Computador local: http://127.0.0.1:8765/app
 echo  Acesso externo: somente via Tailscale Serve
 echo  ATENCAO: senha forte de proprietario obrigatoria.
