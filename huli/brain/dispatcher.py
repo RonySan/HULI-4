@@ -10,6 +10,7 @@ from huli.core.contracts import KernelHandler, KernelRequest, KernelResponse
 from huli.core.events import EventBus
 from huli.personality import PersonalityEngine
 from huli.security.privacy import PRIVATE_JOURNAL_REDACTION, is_private_journal_text, redact_private_text
+from huli.security.remote import remote_intent_allowed
 from huli.skills.registry import SkillRegistry
 
 
@@ -51,6 +52,16 @@ class BrainDispatcher(KernelHandler):
                 request_id=request.request_id,
                 session_id=session_id,
                 decision=decision,
+            )
+
+        # A classificação pode mudar após contexto/persona. A API valida antes,
+        # e o dispatcher verifica a intenção efetivamente executada.
+        if request.metadata.get("remote_client") is True and not remote_intent_allowed(intent_value):
+            return KernelResponse(
+                request_id=request.request_id,
+                text="Esse comando exige execução local autorizada.",
+                handled_by="remote-security",
+                ok=False,
             )
 
         metadata = dict(request.metadata)

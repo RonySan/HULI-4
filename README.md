@@ -21,16 +21,29 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.14`
+- **Versão:** `4.0.0-alpha.15`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
-- **Módulo atual:** voz contínua, agenda natural, proprietário local e aplicativos
-- **Branch de desenvolvimento:** `phase-9-voice-staging`
+- **Módulo atual:** voz local, agenda natural e cliente web multidispositivo (staging)
+- **Branch de desenvolvimento:** `phase-6-multidevice-alpha15`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
 validação local do usuário e do CI em Linux e Windows.
 As Fases 5–8 não foram declaradas concluídas: apenas a interface local de voz foi
 antecipada por decisão do proprietário, sem acoplar voz ao Kernel.
+
+## Huli no notebook e no Android — alpha.15
+
+Esta branch inclui o primeiro cliente web privado para notebook e Android:
+`http://127.0.0.1:8765/app`. Use `INICIAR_HULI_WEB.bat` no computador
+principal. Para acessar de outros dispositivos, utilize exclusivamente Tailscale
+Serve por HTTPS, depois de configurar senha forte de proprietário.
+
+**Manual e restrições de segurança:** [docs/MULTIDISPOSITIVO_ALPHA15.md](docs/MULTIDISPOSITIVO_ALPHA15.md).
+
+Esta etapa é experimental: não oferece APK Android, wake word no celular, LLM
+integrado nem acesso remoto ao diário ou abertura de programas. A branch
+`phase-9-voice-staging` permanece disponível sem estas alterações.
 
 ## Fluxo atual
 

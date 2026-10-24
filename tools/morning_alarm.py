@@ -10,7 +10,10 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import ttk
-import winsound
+try:
+    import winsound
+except ImportError:  # Disponível somente no Windows.
+    winsound = None
 
 
 APP_ROOT = Path(__file__).resolve().parents[1]
@@ -110,6 +113,8 @@ class MorningAlarm:
         return path if path.is_file() and path.suffix.casefold() == ".wav" else None
 
     def start_sound(self) -> None:
+        if winsound is None:
+            raise RuntimeError("O despertador sonoro exige Windows.")
         self.stop_sound()
         self.stop_event.clear()
         if self.audio_path:
@@ -137,7 +142,8 @@ class MorningAlarm:
 
     def stop_sound(self) -> None:
         self.stop_event.set()
-        winsound.PlaySound(None, 0)
+        if winsound is not None:
+            winsound.PlaySound(None, 0)
 
     def snooze(self) -> None:
         self.stop_sound()

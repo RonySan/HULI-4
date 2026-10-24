@@ -25,6 +25,7 @@ class Settings:
     data_dir: Path = APP_ROOT / "data"
     api_host: str = "127.0.0.1"
     api_port: int = 8765
+    remote_access_enabled: bool = False
     session_hours: int = 24 * 7
     max_input_chars: int = 10_000
     timezone: str = "America/Sao_Paulo"
@@ -135,6 +136,7 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         data_dir=Path(raw_data_dir).expanduser(),
         api_host=api_host,
         api_port=api_port,
+        remote_access_enabled=_read_bool(values, "HULI_REMOTE_ACCESS_ENABLED", False),
         session_hours=session_hours,
         max_input_chars=max_input_chars,
         timezone=timezone_name,
