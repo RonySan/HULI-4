@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from threading import RLock
 
 from huli.brain.normalization import normalize_text
 from huli.core.contracts import KernelRequest, KernelResponse
@@ -21,6 +22,7 @@ class SpotifySkill:
         self._client = client
         # Preferência temporária deste processo; nunca gravar ID no banco.
         self._selected_device_id: str | None = None
+        self._lock = RLock()
 
     def can_handle(self, request: KernelRequest) -> bool:
         return str(request.metadata.get("intent") or "") in self.intents
@@ -65,6 +67,10 @@ class SpotifySkill:
         return str(matches[0]["name"])
 
     def handle(self, request: KernelRequest) -> KernelResponse:
+        with self._lock:
+            return self._handle_locked(request)
+
+    def _handle_locked(self, request: KernelRequest) -> KernelResponse:
         intent = str(request.metadata.get("intent") or "")
         if intent not in self.intents:
             return KernelResponse(
