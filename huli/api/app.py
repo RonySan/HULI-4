@@ -17,20 +17,10 @@ from huli import __app_name__, __version__
 from huli.bootstrap import HuliRuntime, build_runtime
 from huli.core import InvalidKernelInput
 from huli.security import AuthenticatedUser, AuthenticationError, JournalVaultError
+from huli.security.remote import remote_intent_allowed
 
 _bearer = HTTPBearer(auto_error=False)
 _WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
-
-# Somente capacidades sem acesso ao sistema operacional ou ao cofre pessoal.
-# Revisar explicitamente novas intenções antes de adicioná-las aqui.
-_REMOTE_ALLOWED_INTENTS = frozenset({
-    "system.status", "time.query", "date.query", "morning.briefing",
-    "agenda.query", "agenda.create", "task.create", "task.list",
-    "task.complete", "daily.summary", "smalltalk", "conversation.recap",
-    "project.query", "memory.remember", "memory.recall", "memory.list",
-    "knowledge.describe", "knowledge.relation", "unknown",
-})
-
 
 class SetupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
@@ -161,14 +151,19 @@ def create_app(runtime: HuliRuntime | None = None) -> FastAPI:
         session_id = payload.session_id or f"api-user-{user.id}"
         if resolved_runtime.settings.remote_access_enabled:
             intent = resolved_runtime.intents.classify(payload.text).intent.value
-            if intent not in _REMOTE_ALLOWED_INTENTS:
+            if not remote_intent_allowed(intent):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Esse comando está disponível apenas no computador local.",
                 )
         try:
             resolved_runtime.security.validate_input(payload.text)
-            response = resolved_runtime.kernel.process(payload.text, metadata={"session_id": session_id, "username": user.username, "role": "owner"})
+            response = resolved_runtime.kernel.process(payload.text, metadata={"session_id": session_id, "username": user.username, "role": "owner", "remote_client": resolved_runtime.settings.remote_access_enabled})
+            if response.handled_by == "remote-security":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Esse comando está disponível apenas no computador local.",
+                )
         except (InvalidKernelInput, ValueError) as exc:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
         return {"request_id": response.request_id, "session_id": session_id, "text": response.text, "handled_by": response.handled_by, "ok": response.ok}
