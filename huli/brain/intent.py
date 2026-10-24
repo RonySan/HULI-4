@@ -42,6 +42,9 @@ class IntentName(StrEnum):
     MEMORY_FORGET = "memory.forget"
     KNOWLEDGE_DESCRIBE = "knowledge.describe"
     KNOWLEDGE_RELATION = "knowledge.relation"
+    SPOTIFY_DEVICE_LIST = "spotify.device.list"
+    SPOTIFY_DEVICE_SELECT = "spotify.device.select"
+    SPOTIFY_DEVICE_RESET = "spotify.device.reset"
     SPOTIFY_PLAY = "spotify.play"
     SPOTIFY_PAUSE = "spotify.pause"
     SPOTIFY_RESUME = "spotify.resume"
@@ -70,6 +73,27 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(
+                IntentName.SPOTIFY_DEVICE_LIST,
+                re.compile(
+                    r"^(?:quais (?:sao )?(?:os )?dispositivos (?:do|no) spotify|liste (?:os )?dispositivos (?:do|no) spotify|dispositivos spotify)$"
+                ),
+                0.995, "spotify-device-list",
+            ),
+            _IntentRule(
+                IntentName.SPOTIFY_DEVICE_SELECT,
+                re.compile(
+                    r"^(?:usar spotify no|use spotify no|spotify usar dispositivo|spotify selecionar dispositivo|selecione dispositivo spotify)\s+.+$"
+                ),
+                0.995, "spotify-device-select",
+            ),
+            _IntentRule(
+                IntentName.SPOTIFY_DEVICE_RESET,
+                re.compile(
+                    r"^(?:spotify (?:dispositivo|modo) automatico|usar dispositivo automatico (?:no )?spotify)$"
+                ),
+                0.995, "spotify-device-reset",
+            ),
             _IntentRule(IntentName.SPOTIFY_PLAY, re.compile(
                 r"^(?:toque|toca|tocar|reproduza|reproduzir)\s+(?:(?:a|minha)\s+)?playlist(?:\s+(?:de|do|da))?(?:\s+.*)?$"
             ), 0.995, "spotify-play-playlist"),
