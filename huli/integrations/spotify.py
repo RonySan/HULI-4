@@ -227,7 +227,42 @@ class SpotifyClient:
                 break
         return items
 
-    def play_playlist(self, name: str) -> str:
+    def devices(self) -> list[dict[str, object]]:
+        """Consulta dispositivos Spotify Connect disponíveis sem salvar IDs."""
+        result = _http_json(API_URL + "/me/player/devices", token=self._access_token())
+        if not isinstance(result, dict) or not isinstance(result.get("devices"), list):
+            raise SpotifyError("Não consegui consultar os dispositivos do Spotify.")
+        devices: list[dict[str, object]] = []
+        for item in result["devices"][:100]:
+            if not isinstance(item, dict):
+                continue
+            identifier = item.get("id")
+            name = item.get("name")
+            if (
+                not isinstance(identifier, str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{4,128}", identifier)
+                or not isinstance(name, str)
+                or not name.strip()
+            ):
+                continue
+            devices.append({
+                "id": identifier,
+                "name": name.strip()[:90],
+                "type": str(item.get("type") or "")[:40],
+                "active": item.get("is_active") is True,
+                "restricted": item.get("is_restricted") is True,
+            })
+        return devices
+
+    @staticmethod
+    def _player_url(path: str, device_id: str | None = None) -> str:
+        if device_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]{4,128}", device_id):
+            raise SpotifyError("ID do dispositivo Spotify inválido.")
+        return API_URL + "/me/player/" + path + (
+            "?" + urlencode({"device_id": device_id}) if device_id else ""
+        )
+
+    def play_playlist(self, name: str, device_id: str | None = None) -> str:
         query = normalize_text(name)
         if not query:
             raise SpotifyError("Qual playlist devo tocar? Diga: Huli, toque minha playlist Nome.")
@@ -240,19 +275,19 @@ class SpotifyClient:
             suggestions = ", ".join(x["name"] for x in matches[:4])
             raise SpotifyError(f"Há mais de uma playlist correspondente: {suggestions}. Diga o nome completo.")
         selected = matches[0]
-        _http_json(API_URL + "/me/player/play", method="PUT",
+        _http_json(self._player_url("play", device_id), method="PUT",
                    token=self._access_token(),
                    payload=json.dumps({"context_uri": selected["uri"]}).encode("utf-8"))
         return selected["name"]
 
-    def pause(self) -> None:
-        _http_json(API_URL + "/me/player/pause", method="PUT",
+    def pause(self, device_id: str | None = None) -> None:
+        _http_json(self._player_url("pause", device_id), method="PUT",
                    token=self._access_token())
 
-    def resume(self) -> None:
-        _http_json(API_URL + "/me/player/play", method="PUT",
+    def resume(self, device_id: str | None = None) -> None:
+        _http_json(self._player_url("play", device_id), method="PUT",
                    token=self._access_token())
 
-    def next(self) -> None:
-        _http_json(API_URL + "/me/player/next", method="POST",
+    def next(self, device_id: str | None = None) -> None:
+        _http_json(self._player_url("next", device_id), method="POST",
                    token=self._access_token())
