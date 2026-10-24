@@ -93,7 +93,12 @@ class BrainDispatcher(KernelHandler):
             },
         )
 
-        skill = self._skills.resolve_intent(intent_value) or self._skills.resolve(enriched)
+        # Antes do fallback generativo, preserve Skills determinísticas sem intenção
+        # explícita (como 'ping'). A IA não deve interceptar esses comandos.
+        if intent_value == "unknown":
+            skill = self._skills.resolve(enriched)
+        else:
+            skill = self._skills.resolve_intent(intent_value) or self._skills.resolve(enriched)
         if skill is not None:
             response = skill.handle(enriched)
         elif intent_value != "unknown":

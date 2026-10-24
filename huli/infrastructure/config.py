@@ -26,6 +26,9 @@ class Settings:
     api_host: str = "127.0.0.1"
     api_port: int = 8765
     remote_access_enabled: bool = False
+    llm_enabled: bool = False
+    llm_model: str = "qwen2.5:7b"
+    llm_timeout_seconds: int = 45
     session_hours: int = 24 * 7
     max_input_chars: int = 10_000
     timezone: str = "America/Sao_Paulo"
@@ -137,6 +140,9 @@ def load_settings(source: Mapping[str, str] | None = None) -> Settings:
         api_host=api_host,
         api_port=api_port,
         remote_access_enabled=_read_bool(values, "HULI_REMOTE_ACCESS_ENABLED", False),
+        llm_enabled=_read_bool(values, "HULI_LLM_ENABLED", False),
+        llm_model=(values.get("HULI_LLM_MODEL", "qwen2.5:7b").strip() or "qwen2.5:7b"),
+        llm_timeout_seconds=_read_int(values, "HULI_LLM_TIMEOUT_SECONDS", 45, minimum=2, maximum=180),
         session_hours=session_hours,
         max_input_chars=max_input_chars,
         timezone=timezone_name,
