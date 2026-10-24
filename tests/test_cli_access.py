@@ -24,6 +24,11 @@ def build_test_runtime(tmp_path: Path):
 def test_direct_main_uses_the_project_virtual_environment(monkeypatch) -> None:
     expected = Path(cli.__file__).resolve().parent / ".venv" / "Scripts" / "python.exe"
     executed = {}
+    original_is_file = Path.is_file
+    monkeypatch.setattr(
+        Path, "is_file",
+        lambda path: path == expected or original_is_file(path),
+    )
     monkeypatch.setattr(cli.sys, "executable", r"C:\Python313\python.exe")
     monkeypatch.setattr(cli.sys, "argv", [str(Path(cli.__file__).resolve()), "--example"])
     monkeypatch.setattr(
