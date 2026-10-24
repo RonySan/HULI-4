@@ -21,10 +21,10 @@ A arquitetura é construída desde o início pensando em **PC + celular + servid
 
 ## Estado atual
 
-- **Versão:** `4.0.0-alpha.17`
+- **Versão:** `4.0.0-alpha.18`
 - **Fase atual:** fundação antecipada da Fase 9 — Voz local no Windows
-- **Módulo atual:** voz local, agenda natural e cliente web multidispositivo (staging)
-- **Branch de desenvolvimento:** `phase-8-spotify-alpha17`
+- **Módulo atual:** voz local, cliente web multidispositivo, IA Ollama opcional e Spotify Connect (staging)
+- **Branch de desenvolvimento:** `phase-9-devices-alpha18`
 
 As regressões das Fases 0 a 4 são executadas antes da validação do diário. A
 `main` continua protegida; código de staging só deve ser integrado depois da
@@ -82,8 +82,8 @@ Interface local (Windows)
 ```
 
 O cérebro local classifica intenções, mantém contexto curto e executa Skills de
-forma determinística. Personalidade nunca altera fatos, permissões ou decisões
-de domínio. OpenAI e Ollama continuam fora desta fase.
+forma determinística. Personalidade não altera permissões nem decisões de domínio.
+Ollama é opcional e recebe apenas solicitações livres, sem acesso a ferramentas.
 
 ## Capacidades atuais
 
@@ -409,3 +409,15 @@ Veja [instalação e limites de segurança](docs/OLLAMA_ALPHA16.md).
 ## H.U.L.I. alpha.17 — Spotify pessoal
 
 Comandos determinísticos de Spotify, autenticação OAuth PKCE e tokens criptografados com DPAPI no Windows. Veja [guia de configuração Spotify](docs/SPOTIFY_ALPHA17.md). A integração exige autenticação voluntária e Spotify Premium; nenhum áudio é redistribuído pela Huli.
+
+## H.U.L.I. alpha.18 — selecionar dispositivo Spotify Connect
+
+A alpha.18 permite listar dispositivos, selecionar um aparelho para comandos musicais
+por nome e voltar ao dispositivo ativo do Spotify. ID de dispositivo é revalidado
+antes de cada ação; aparelhos restritos e nomes ambíguos são rejeitados. No painel
+web estão disponíveis os atalhos **Dispositivos** e **Playlists**.
+
+Para validar as quatro branches (alpha.15–alpha.18) com worktrees temporários,
+sem trocar a branch atual nem tocar nos dados da Huli, utilize
+`scripts/VALIDAR_BRANCHES.ps1`. Veja o guia
+[docs/VALIDACAO_ALPHA18.md](docs/VALIDACAO_ALPHA18.md).

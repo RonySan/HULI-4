@@ -7,6 +7,7 @@ REMOTE_ALLOWED_INTENTS = frozenset({
     "project.query", "memory.remember", "memory.recall", "memory.list",
     "knowledge.describe", "knowledge.relation", "unknown",
     "spotify.play", "spotify.pause", "spotify.resume", "spotify.next", "spotify.list",
+    "spotify.device.list", "spotify.device.select", "spotify.device.reset",
 })
 
 
