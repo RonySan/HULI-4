@@ -42,6 +42,11 @@ class IntentName(StrEnum):
     MEMORY_FORGET = "memory.forget"
     KNOWLEDGE_DESCRIBE = "knowledge.describe"
     KNOWLEDGE_RELATION = "knowledge.relation"
+    SPOTIFY_PLAY = "spotify.play"
+    SPOTIFY_PAUSE = "spotify.pause"
+    SPOTIFY_RESUME = "spotify.resume"
+    SPOTIFY_NEXT = "spotify.next"
+    SPOTIFY_LIST = "spotify.list"
     APP_OPEN = "app.open"
     UNKNOWN = "unknown"
 
@@ -65,6 +70,21 @@ class _IntentRule:
 class IntentEngine:
     def __init__(self) -> None:
         self._rules = (
+            _IntentRule(IntentName.SPOTIFY_PLAY, re.compile(
+                r"^(?:toque|toca|tocar|reproduza|reproduzir)\s+(?:(?:a|minha)\s+)?playlist(?:\s+(?:de|do|da))?(?:\s+.*)?$"
+            ), 0.995, "spotify-play-playlist"),
+            _IntentRule(IntentName.SPOTIFY_PAUSE, re.compile(
+                r"^(?:pause|pausar|pausa|pare|parar)\s+(?:a\s+)?(?:musica|spotify|reproducao)(?:\s+(?:do|no)\s+spotify)?$"
+            ), 0.995, "spotify-pause"),
+            _IntentRule(IntentName.SPOTIFY_RESUME, re.compile(
+                r"^(?:continue|continuar|retome|retomar|volte a tocar|tocar|toque|toca)\s+(?:a\s+)?(?:musica|spotify|reproducao)(?:\s+no spotify)?$"
+            ), 0.995, "spotify-resume"),
+            _IntentRule(IntentName.SPOTIFY_NEXT, re.compile(
+                r"^(?:proxima|pula|pular|avance para a proxima|passe para a proxima)\s+(?:musica|faixa)(?:\s+no spotify)?$"
+            ), 0.995, "spotify-next"),
+            _IntentRule(IntentName.SPOTIFY_LIST, re.compile(
+                r"^(?:liste|mostre|quais sao|quais)\s+(?:as\s+)?(?:minhas\s+)?playlists(?:\s+(?:do|no)\s+spotify)?$"
+            ), 0.995, "spotify-list"),
             _IntentRule(
                 IntentName.JOURNAL_RESTORE,
                 re.compile(
